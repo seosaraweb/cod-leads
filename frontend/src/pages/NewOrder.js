@@ -138,59 +138,52 @@ export default function NewOrder() {
   if (step === STEP.VARIANT) return (
     <div>
       {/* Back + product name */}
-      <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:20 }}>
-        <button onClick={()=>setStep(STEP.PRODUCT)} style={{ width:42,height:42,borderRadius:12,border:'2px solid #e5e7eb',background:'#fff',fontSize:20,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>←</button>
+      <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
+        <button onClick={()=>setStep(STEP.PRODUCT)} style={{ width:42,height:42,borderRadius:12,border:'2px solid #e5e7eb',background:'#fff',fontSize:20,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>←</button>
         <h2 style={{ margin:0, fontSize:20, fontWeight:800 }}>{product.name}</h2>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
-        {/* Image gallery */}
-        <div>
-          {/* Main image */}
-          <div style={{ borderRadius:16, overflow:'hidden', background:'#f0f0f0', aspectRatio:'1', marginBottom:10 }}>
-            {activeImage
-              ? <img src={imgUrl(activeImage.filename)} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-              : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:64 }}>📦</div>}
-          </div>
-          {/* Thumbnails */}
-          {product.images?.length > 1 && (
-            <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-              {product.images.map(img => (
-                <div key={img.id} onClick={() => setActiveImage(img)}
-                  style={{ width:60, height:60, borderRadius:10, overflow:'hidden', cursor:'pointer', border: activeImage?.id===img.id ? '2px solid #2563eb' : '2px solid transparent', flexShrink:0 }}>
-                  <img src={imgUrl(img.filename)} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+      {/* Main image - full width */}
+      <div style={{ borderRadius:16, overflow:'hidden', background:'#f0f0f0', aspectRatio:'4/3', marginBottom:10 }}>
+        {activeImage
+          ? <img src={imgUrl(activeImage.filename)} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+          : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:64 }}>📦</div>}
+      </div>
 
-        {/* Variants */}
-        <div>
-          <div style={{ fontWeight:700, fontSize:15, marginBottom:12, color:'#555' }}>Choisir la variante</div>
-          <div style={{ display:'flex', flexDirection:'column', gap:8, maxHeight:420, overflowY:'auto' }}>
-            {product.variants.map((v, idx) => {
-              const varImg = v.image_id ? product.images?.find(i => i.id === v.image_id) : null;
-              const label = [v.size, v.color].filter(Boolean).join(' / ') || `Variante ${idx+1}`;
-              return (
-                <button key={v.id||idx} onClick={() => pickVariant(v)}
-                  style={{ display:'flex', alignItems:'center', gap:10, padding:'11px 14px', background:'#fff', border:'2px solid #e5e7eb', borderRadius:12, cursor:'pointer', textAlign:'left', transition:'all 0.12s' }}
-                  onMouseEnter={e=>{e.currentTarget.style.borderColor='#2563eb';e.currentTarget.style.background='#eff6ff';}}
-                  onMouseLeave={e=>{e.currentTarget.style.borderColor='#e5e7eb';e.currentTarget.style.background='#fff';}}>
-                  {varImg && (
-                    <div style={{ width:44, height:44, borderRadius:8, overflow:'hidden', flexShrink:0 }}>
-                      <img src={imgUrl(varImg.filename)} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-                    </div>
-                  )}
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontWeight:700, fontSize:15 }}>{label}</div>
-                  </div>
-                  <div style={{ fontWeight:800, fontSize:16, color:'#059669', flexShrink:0 }}>{v.price} DH</div>
-                </button>
-              );
-            })}
-          </div>
+      {/* Thumbnails horizontal scroll */}
+      {product.images?.length > 1 && (
+        <div style={{ display:'flex', gap:8, overflowX:'auto', paddingBottom:8, marginBottom:16 }}>
+          {product.images.map(img => (
+            <div key={img.id} onClick={() => setActiveImage(img)} style={{ flexShrink:0, width:64, height:64, borderRadius:10, overflow:'hidden', cursor:'pointer', border: activeImage?.id===img.id ? '3px solid #2563eb' : '3px solid transparent' }}>
+              <img src={imgUrl(img.filename)} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+            </div>
+          ))}
         </div>
+      )}
+
+      {/* Variants - full width list */}
+      <div style={{ fontWeight:700, fontSize:15, marginBottom:10, color:'#555' }}>Choisir la variante</div>
+      <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+        {product.variants.map((v, idx) => {
+          const varImg = v.image_id ? product.images?.find(i => i.id === v.image_id) : null;
+          const label = [v.size, v.color].filter(Boolean).join(' / ') || `Variante ${idx+1}`;
+          return (
+            <button key={v.id||idx} onClick={() => pickVariant(v)}
+              style={{ display:'flex', alignItems:'center', gap:12, padding:'14px 16px', background:'#fff', border:'2px solid #e5e7eb', borderRadius:14, cursor:'pointer', textAlign:'left', width:'100%', boxSizing:'border-box' }}
+              onMouseEnter={e=>{e.currentTarget.style.borderColor='#2563eb';e.currentTarget.style.background='#eff6ff';}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor='#e5e7eb';e.currentTarget.style.background='#fff';}}>
+              {varImg ? (
+                <div style={{ width:48, height:48, borderRadius:10, overflow:'hidden', flexShrink:0 }}>
+                  <img src={imgUrl(varImg.filename)} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                </div>
+              ) : (
+                <div style={{ width:48, height:48, borderRadius:10, background:'#f0f0f0', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:22 }}>📦</div>
+              )}
+              <div style={{ flex:1, fontWeight:700, fontSize:16 }}>{label}</div>
+              <div style={{ fontWeight:800, fontSize:18, color:'#059669', flexShrink:0 }}>{v.price} DH →</div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
