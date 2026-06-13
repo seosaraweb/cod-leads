@@ -202,10 +202,10 @@ export default function Orders() {
                              : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22 }}>📦</div>}
                     </div>
                     <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:2, flexWrap:'wrap' }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:4, flexWrap:'wrap' }}>
                         <span style={{ fontFamily:'monospace', fontSize:11, fontWeight:700, color:'#2563eb' }}>{o.order_ref}</span>
-                        <span style={{ background:S_COLOR[o.status]?.bg, color:S_COLOR[o.status]?.color, fontSize:11, padding:'2px 8px', borderRadius:99, fontWeight:600 }}>{o.status}</span>
-                        {o.variant_label && <span style={{ background:'#f0f0f0', color:'#555', fontSize:11, padding:'2px 8px', borderRadius:99 }}>{o.variant_label}</span>}
+                        <span style={{ background:S_COLOR[o.status]?.bg, color:S_COLOR[o.status]?.color, fontSize:11, padding:'3px 10px', borderRadius:99, fontWeight:700 }}>{o.status}</span>
+                        {o.variant_label && <span style={{ background:'#2563eb', color:'#fff', fontSize:12, padding:'3px 10px', borderRadius:99, fontWeight:700 }}>{o.variant_label}</span>}
                       </div>
                       <div style={{ fontWeight:700, fontSize:15 }}>{o.client_name}</div>
                       <div style={{ fontSize:13, color:'#888' }}>{o.phone} · {o.city}</div>
