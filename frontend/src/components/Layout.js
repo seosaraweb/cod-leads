@@ -3,10 +3,10 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../utils/AuthContext';
 
 const NAV = [
-  { path: '/', icon: '➕', label: 'Nouvelle commande', roles: ['support', 'admin'] },
-  { path: '/orders', icon: '📋', label: 'Commandes', roles: ['support', 'admin'] },
-  { path: '/print', icon: '🖨️', label: 'Impression', roles: ['support', 'admin'] },
-  { path: '/stats', icon: '📊', label: 'Statistiques', roles: ['admin'] },
+  { path: '/', icon: '✅', label: 'Confirmer', roles: ['support','admin'] },
+  { path: '/orders', icon: '📋', label: 'Commandes', roles: ['support','admin'] },
+  { path: '/print', icon: '🖨️', label: 'Imprimer', roles: ['support','admin'] },
+  { path: '/stats', icon: '📊', label: 'Stats', roles: ['admin'] },
   { path: '/products', icon: '📦', label: 'Produits', roles: ['admin'] },
   { path: '/users', icon: '👥', label: 'Équipe', roles: ['admin'] },
 ];
@@ -15,61 +15,40 @@ export default function Layout({ children }) {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [mobile, setMobile] = useState(false);
-
-  const handleLogout = () => { logout(); navigate('/login'); };
   const navItems = NAV.filter(n => n.roles.includes(user?.role));
 
+  const handleLogout = () => { logout(); navigate('/login'); };
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#f5f5f0' }}>
-      {/* Sidebar */}
-      <aside style={{
-        width: 220, background: '#1a1a2e', color: '#fff', display: 'flex', flexDirection: 'column',
-        position: 'fixed', top: 0, left: mobile ? 0 : 0, height: '100vh', zIndex: 100,
-        transition: 'transform 0.2s', transform: mobile ? 'translateX(0)' : undefined
-      }}>
-        <div style={{ padding: '24px 20px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-          <div style={{ fontSize: 22 }}>📦</div>
-          <div style={{ fontSize: 16, fontWeight: 700, marginTop: 4 }}>COD Leads</div>
-          <div style={{ fontSize: 12, color: '#8888aa', marginTop: 2 }}>Maroc COD Manager</div>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f4f4f0' }}>
+      {/* Top bar mobile */}
+      <header style={{ background: '#1a1a2e', color: '#fff', padding: '0 16px', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 20 }}>📦</span>
+          <span style={{ fontWeight: 700, fontSize: 16 }}>COD Leads</span>
         </div>
-
-        <nav style={{ flex: 1, padding: '12px 0' }}>
-          {navItems.map(item => (
-            <Link key={item.path} to={item.path} style={{ textDecoration: 'none' }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                padding: '10px 20px', margin: '2px 8px', borderRadius: 8,
-                background: location.pathname === item.path ? 'rgba(37,99,235,0.3)' : 'transparent',
-                color: location.pathname === item.path ? '#60a5fa' : '#ccc',
-                fontWeight: location.pathname === item.path ? 600 : 400,
-                fontSize: 14, cursor: 'pointer', transition: 'all 0.15s'
-              }}>
-                <span>{item.icon}</span>
-                <span>{item.label}</span>
-              </div>
-            </Link>
-          ))}
-        </nav>
-
-        <div style={{ padding: '16px 20px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-          <div style={{ fontSize: 13, color: '#aaa', marginBottom: 4 }}>
-            <span style={{ color: '#60a5fa', fontWeight: 600 }}>{user?.username}</span>
-            <span style={{ marginLeft: 8, background: 'rgba(37,99,235,0.2)', color: '#60a5fa', padding: '2px 8px', borderRadius: 99, fontSize: 11 }}>
-              {user?.role === 'admin' ? 'Admin' : 'Support'}
-            </span>
-          </div>
-          <button onClick={handleLogout} style={{
-            width: '100%', padding: '8px', background: 'rgba(255,255,255,0.05)', color: '#888',
-            border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, cursor: 'pointer', fontSize: 13, marginTop: 8
-          }}>Déconnexion</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 13, color: '#60a5fa' }}>{user?.username}</span>
+          <button onClick={handleLogout} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#aaa', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 12 }}>
+            Sortir
+          </button>
         </div>
-      </aside>
+      </header>
 
-      {/* Main */}
-      <main style={{ marginLeft: 220, flex: 1, padding: '24px 28px', minWidth: 0 }}>
+      {/* Content */}
+      <main style={{ flex: 1, padding: '16px', paddingBottom: 80, maxWidth: 700, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
         {children}
       </main>
+
+      {/* Bottom nav mobile */}
+      <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#1a1a2e', display: 'flex', borderTop: '1px solid rgba(255,255,255,0.08)', zIndex: 100 }}>
+        {navItems.map(item => (
+          <Link key={item.path} to={item.path} style={{ flex: 1, textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 4px', gap: 2, borderTop: location.pathname === item.path ? '2px solid #60a5fa' : '2px solid transparent' }}>
+            <span style={{ fontSize: 18 }}>{item.icon}</span>
+            <span style={{ fontSize: 10, color: location.pathname === item.path ? '#60a5fa' : '#666', fontWeight: location.pathname === item.path ? 700 : 400 }}>{item.label}</span>
+          </Link>
+        ))}
+      </nav>
     </div>
   );
 }

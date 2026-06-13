@@ -5,120 +5,82 @@ import { useAuth } from '../utils/AuthContext';
 export default function Users() {
   const { user: me } = useAuth();
   const [users, setUsers] = useState([]);
-  const [form, setForm] = useState({ username: '', password: '', role: 'support' });
-  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({ username:'', password:'', role:'support' });
   const [newPw, setNewPw] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
 
-  const load = () => api.get('/users').then(r => setUsers(r.data)).catch(() => {});
+  const load = () => api.get('/users').then(r => setUsers(r.data));
   useEffect(() => { load(); }, []);
 
   const add = async () => {
     if (!form.username || !form.password) return;
     setLoading(true);
-    try {
-      await api.post('/users', form);
-      setForm({ username: '', password: '', role: 'support' });
-      load();
-    } catch (err) { alert(err.response?.data?.error || 'Erreur'); }
+    try { await api.post('/users', form); setForm({ username:'', password:'', role:'support' }); setShowAdd(false); load(); }
+    catch(err) { alert(err.response?.data?.error || 'Erreur'); }
     setLoading(false);
   };
 
   const del = async (id) => {
-    if (!window.confirm('Supprimer cet utilisateur ?')) return;
-    await api.delete(`/users/${id}`);
-    load();
+    if (!window.confirm('Supprimer ?')) return;
+    await api.delete(`/users/${id}`); load();
   };
 
   const changePw = async (id) => {
     const pw = newPw[id];
-    if (!pw || pw.length < 4) return alert('Mot de passe trop court');
+    if (!pw || pw.length < 4) return alert('Trop court');
     await api.put(`/users/${id}/password`, { password: pw });
-    setNewPw(p => ({ ...p, [id]: '' }));
-    alert('Mot de passe mis à jour');
+    setNewPw(p => ({...p, [id]:''}));
+    alert('✅ Mot de passe changé');
   };
 
-  const inp = { padding: '10px 14px', borderRadius: 8, border: '1.5px solid #e0e0e0', fontSize: 14, background: '#fff' };
+  const inp = { padding:'13px 14px', borderRadius:12, border:'2px solid #e5e7eb', fontSize:16, outline:'none', width:'100%', boxSizing:'border-box', background:'#fff' };
 
   return (
     <div>
-      <h1 style={{ margin: '0 0 24px', fontSize: 22, fontWeight: 700 }}>👥 Équipe Support</h1>
-
-      {/* Add user */}
-      <div style={{ background: '#fff', borderRadius: 12, padding: '20px 24px', boxShadow: '0 1px 6px rgba(0,0,0,0.05)', marginBottom: 20 }}>
-        <h3 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 700 }}>➕ Ajouter un agent</h3>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 5, color: '#555' }}>Identifiant</label>
-            <input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} placeholder="support1" style={inp} />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 5, color: '#555' }}>Mot de passe</label>
-            <input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••" style={inp} />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 5, color: '#555' }}>Rôle</label>
-            <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} style={inp}>
-              <option value="support">Support</option>
-              <option value="admin">Admin</option>
-            </select>
-          </div>
-          <button onClick={add} disabled={loading}
-            style={{ padding: '10px 24px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-            Ajouter
-          </button>
-        </div>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+        <h2 style={{ margin:0, fontSize:18, fontWeight:700 }}>👥 Équipe ({users.length})</h2>
+        <button onClick={() => setShowAdd(f=>!f)} style={{ padding:'10px 16px', background:'#2563eb', color:'#fff', border:'none', borderRadius:12, fontWeight:700, cursor:'pointer', fontSize:14 }}>
+          {showAdd ? 'Annuler' : '+ Ajouter'}
+        </button>
       </div>
 
-      {/* Users list */}
-      <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 6px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-          <thead>
-            <tr style={{ background: '#f9f9f9', borderBottom: '1.5px solid #f0f0f0' }}>
-              <th style={{ padding: '12px 20px', textAlign: 'left', fontWeight: 600, color: '#555' }}>Identifiant</th>
-              <th style={{ padding: '12px 20px', textAlign: 'left', fontWeight: 600, color: '#555' }}>Rôle</th>
-              <th style={{ padding: '12px 20px', textAlign: 'left', fontWeight: 600, color: '#555' }}>Créé le</th>
-              <th style={{ padding: '12px 20px', textAlign: 'left', fontWeight: 600, color: '#555' }}>Changer mot de passe</th>
-              <th style={{ padding: '12px 20px', textAlign: 'left', fontWeight: 600, color: '#555' }}>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map(u => (
-              <tr key={u.id} style={{ borderBottom: '1px solid #f5f5f5' }}>
-                <td style={{ padding: '12px 20px', fontWeight: 600 }}>
-                  {u.username}
-                  {u.id === me?.id && <span style={{ marginLeft: 8, background: '#eff6ff', color: '#2563eb', padding: '2px 8px', borderRadius: 99, fontSize: 11 }}>Vous</span>}
-                </td>
-                <td style={{ padding: '12px 20px' }}>
-                  <span style={{ background: u.role === 'admin' ? '#fef3c7' : '#f0fdf4', color: u.role === 'admin' ? '#92400e' : '#166534', padding: '4px 10px', borderRadius: 99, fontSize: 12, fontWeight: 600 }}>
-                    {u.role === 'admin' ? '👑 Admin' : '🎧 Support'}
-                  </span>
-                </td>
-                <td style={{ padding: '12px 20px', color: '#888', fontSize: 13 }}>
-                  {new Date(u.created_at).toLocaleDateString('fr-MA')}
-                </td>
-                <td style={{ padding: '12px 20px' }}>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <input type="password" placeholder="Nouveau mdp" value={newPw[u.id] || ''}
-                      onChange={e => setNewPw(p => ({ ...p, [u.id]: e.target.value }))}
-                      style={{ padding: '6px 12px', borderRadius: 6, border: '1.5px solid #e0e0e0', fontSize: 13, width: 140 }} />
-                    <button onClick={() => changePw(u.id)}
-                      style={{ padding: '6px 12px', background: '#f0fdf4', color: '#16a34a', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
-                      Changer
-                    </button>
-                  </div>
-                </td>
-                <td style={{ padding: '12px 20px' }}>
-                  {u.id !== me?.id && (
-                    <button onClick={() => del(u.id)}
-                      style={{ padding: '6px 14px', background: '#fff5f5', color: '#c0392b', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
-                      🗑️ Supprimer
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {showAdd && (
+        <div style={{ background:'#fff', borderRadius:14, padding:'14px', marginBottom:16, display:'flex', flexDirection:'column', gap:10 }}>
+          <input value={form.username} onChange={e=>setForm(f=>({...f,username:e.target.value}))} placeholder="Identifiant" style={inp} />
+          <input type="password" value={form.password} onChange={e=>setForm(f=>({...f,password:e.target.value}))} placeholder="Mot de passe" style={inp} />
+          <select value={form.role} onChange={e=>setForm(f=>({...f,role:e.target.value}))} style={inp}>
+            <option value="support">Support</option>
+            <option value="admin">Admin</option>
+          </select>
+          <button onClick={add} disabled={loading} style={{ padding:'14px', background:'#2563eb', color:'#fff', border:'none', borderRadius:12, fontSize:16, fontWeight:700, cursor:'pointer' }}>
+            {loading ? 'Ajout...' : 'Créer l\'agent'}
+          </button>
+        </div>
+      )}
+
+      <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+        {users.map(u => (
+          <div key={u.id} style={{ background:'#fff', borderRadius:14, padding:'14px' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12 }}>
+              <div style={{ width:44, height:44, borderRadius:'50%', background: u.role==='admin' ? '#fef3c7' : '#eff6ff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, flexShrink:0 }}>
+                {u.role==='admin' ? '👑' : '🎧'}
+              </div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontWeight:700, fontSize:16 }}>{u.username} {u.id===me?.id && <span style={{ fontSize:12, background:'#eff6ff', color:'#2563eb', padding:'2px 8px', borderRadius:99 }}>Vous</span>}</div>
+                <div style={{ fontSize:13, color:'#888' }}>{u.role==='admin' ? 'Administrateur' : 'Support'} · Depuis {new Date(u.created_at).toLocaleDateString('fr-MA')}</div>
+              </div>
+              {u.id !== me?.id && (
+                <button onClick={() => del(u.id)} style={{ background:'#fee2e2', color:'#b91c1c', border:'none', borderRadius:10, padding:'8px 12px', cursor:'pointer', fontSize:16 }}>🗑️</button>
+              )}
+            </div>
+            <div style={{ display:'flex', gap:8 }}>
+              <input type="password" placeholder="Nouveau mot de passe" value={newPw[u.id]||''} onChange={e=>setNewPw(p=>({...p,[u.id]:e.target.value}))}
+                style={{ flex:1, padding:'11px 14px', borderRadius:10, border:'1.5px solid #e0e0e0', fontSize:15, outline:'none' }} />
+              <button onClick={() => changePw(u.id)} style={{ padding:'11px 16px', background:'#f0fdf4', color:'#16a34a', border:'none', borderRadius:10, cursor:'pointer', fontWeight:600, fontSize:14 }}>OK</button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
