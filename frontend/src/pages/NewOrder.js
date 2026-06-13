@@ -46,9 +46,11 @@ export default function NewOrder() {
       return setError('Remplis tous les champs obligatoires');
     setLoading(true); setError('');
     try {
+      const imageFilename = activeImage?.filename || product.images?.[0]?.filename || '';
       const res = await api.post('/orders', {
         product_id: product.id,
         product_name: product.name,
+        product_image: imageFilename,
         variant_id: variant?.id || null,
         variant_label: getVariantLabel(),
         price: getPrice(),

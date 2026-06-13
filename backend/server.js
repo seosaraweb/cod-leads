@@ -216,12 +216,12 @@ app.post('/api/products/:id/variants', auth, adminOnly, (req, res) => {
 
 // ── ORDERS ──
 app.post('/api/orders', auth, (req, res) => {
-  const { product_id, product_name, variant_id, variant_label, client_name, phone, address, city, price, quantity, notes } = req.body;
+  const { product_id, product_name, product_image, variant_id, variant_label, client_name, phone, address, city, price, quantity, notes } = req.body;
   if (!client_name || !phone || !address || !city || !product_name)
     return res.status(400).json({ error: 'Champs obligatoires manquants' });
   const ref = genRef();
-  db.prepare(`INSERT INTO orders (order_ref,product_id,product_name,variant_id,variant_label,client_name,phone,address,city,price,quantity,notes,support_id,support_name) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-    .run(ref, product_id||null, product_name, variant_id||null, variant_label||'', client_name, phone, address, city, price||0, quantity||1, notes||'', req.user.id, req.user.username);
+  db.prepare(`INSERT INTO orders (order_ref,product_id,product_name,product_image,variant_id,variant_label,client_name,phone,address,city,price,quantity,notes,support_id,support_name) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+    .run(ref, product_id||null, product_name, product_image||'', variant_id||null, variant_label||'', client_name, phone, address, city, price||0, quantity||1, notes||'', req.user.id, req.user.username);
   res.json(db.prepare('SELECT * FROM orders WHERE order_ref = ?').get(ref));
 });
 
