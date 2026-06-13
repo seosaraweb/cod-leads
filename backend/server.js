@@ -80,6 +80,11 @@ db.exec(`
   );
 `);
 
+// Migrations — add columns if they don't exist
+try { db.exec("ALTER TABLE orders ADD COLUMN product_image TEXT DEFAULT ''"); } catch(e) {}
+try { db.exec("ALTER TABLE orders ADD COLUMN variant_id INTEGER"); } catch(e) {}
+try { db.exec("ALTER TABLE orders ADD COLUMN variant_label TEXT DEFAULT ''"); } catch(e) {}
+
 if (!db.prepare('SELECT id FROM users WHERE username = ?').get('admin')) {
   db.prepare('INSERT INTO users (username, password, role) VALUES (?, ?, ?)').run('admin', bcrypt.hashSync('admin123', 10), 'admin');
 }
