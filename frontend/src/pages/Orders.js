@@ -133,8 +133,20 @@ export default function Orders() {
             <table className="orders-table">
               <thead>
                 <tr style={{ background:'#f9f9f9', borderBottom:'2px solid #f0f0f0' }}>
-                  {['','Réf','Produit / Variante','Client','Téléphone','Ville','Prix','Statut', user?.role==='admin'&&'Support','Heure',''].filter(Boolean).map(h=>(
-                    <th key={h} style={{ padding:'11px 12px', textAlign:'left', fontWeight:600, color:'#666', fontSize:12, whiteSpace:'nowrap' }}>{h}</th>
+                  {[
+                    { label:'', w:52 },
+                    { label:'Réf', w:160 },
+                    { label:'Produit / Variante', w:'auto' },
+                    { label:'Client', w:140 },
+                    { label:'Téléphone', w:120 },
+                    { label:'Ville', w:110 },
+                    { label:'Prix', w:90 },
+                    { label:'Statut', w:130 },
+                    ...(user?.role==='admin' ? [{ label:'Support', w:110 }] : []),
+                    { label:'Heure', w:60 },
+                    { label:'', w:40 },
+                  ].map(h=>(
+                    <th key={h.label} style={{ padding:'11px 12px', textAlign:'left', fontWeight:600, color:'#666', fontSize:12, whiteSpace:'nowrap', width:h.w }}>{h.label}</th>
                   ))}
                 </tr>
               </thead>
@@ -152,19 +164,16 @@ export default function Orders() {
                         </div>
                       </td>
                       <td style={{ padding:'8px 12px', fontFamily:'monospace', fontSize:12, fontWeight:700, color:'#2563eb', whiteSpace:'nowrap' }}>{o.order_ref}</td>
-                      {/* Product + variant badge */}
-                      <td style={{ padding:'8px 12px', maxWidth:180 }}>
-                        <div style={{ fontWeight:600, fontSize:14, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{o.product_name}</div>
-                        {o.variant_label && (
-                          <span style={{ display:'inline-block', marginTop:3, background:'#f0f0f0', color:'#555', fontSize:11, padding:'2px 8px', borderRadius:99, fontWeight:600 }}>
-                            {o.variant_label}
-                          </span>
-                        )}
-                        {o.notes && <div style={{ fontSize:11, color:'#aaa', marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{o.notes}</div>}
+                      <td style={{ padding:'8px 12px' }}>
+                        <div style={{ fontWeight:600, fontSize:14, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:200 }}>{o.product_name}</div>
+                        <div style={{ display:'flex', gap:4, marginTop:3, flexWrap:'wrap' }}>
+                          {o.variant_label && <span style={{ background:'#2563eb', color:'#fff', fontSize:11, padding:'2px 8px', borderRadius:99, fontWeight:700, whiteSpace:'nowrap' }}>{o.variant_label}</span>}
+                          {o.notes && <span style={{ background:'#fef3c7', color:'#92400e', fontSize:11, padding:'2px 8px', borderRadius:99, whiteSpace:'nowrap' }}>{o.notes}</span>}
+                        </div>
                       </td>
-                      <td style={{ padding:'8px 12px', fontWeight:600, fontSize:14 }}>{o.client_name}</td>
-                      <td style={{ padding:'8px 12px', fontFamily:'monospace', fontSize:13 }}>{o.phone}</td>
-                      <td style={{ padding:'8px 12px', fontSize:14 }}>{o.city}</td>
+                      <td style={{ padding:'8px 12px', fontWeight:600, fontSize:14, whiteSpace:'nowrap' }}>{o.client_name}</td>
+                      <td style={{ padding:'8px 12px', fontFamily:'monospace', fontSize:13, whiteSpace:'nowrap' }}>{o.phone}</td>
+                      <td style={{ padding:'8px 12px', fontSize:14, whiteSpace:'nowrap' }}>{o.city}</td>
                       <td style={{ padding:'8px 12px', whiteSpace:'nowrap' }}>
                         <span style={{ fontWeight:700, fontSize:15 }}>{o.price*o.quantity}</span>
                         <span style={{ color:'#aaa', fontSize:12 }}> DH{o.quantity>1?` ×${o.quantity}`:''}</span>
