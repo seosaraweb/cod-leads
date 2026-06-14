@@ -144,10 +144,10 @@ export default function NewOrder() {
       </div>
 
       {/* Main image - full width */}
-      <div style={{ borderRadius:16, overflow:'hidden', background:'#f0f0f0', aspectRatio:'4/3', marginBottom:10 }}>
+      <div style={{ borderRadius:16, overflow:'hidden', background:'#f0f0f0', marginBottom:10 }}>
         {activeImage
-          ? <img src={imgUrl(activeImage.filename)} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-          : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:64 }}>📦</div>}
+          ? <img src={imgUrl(activeImage.filename)} alt="" style={{ width:'100%', height:'auto', display:'block', maxHeight:'70vh', objectFit:'contain' }} />
+          : <div style={{ height:300, display:'flex', alignItems:'center', justifyContent:'center', fontSize:64 }}>📦</div>}
       </div>
 
       {/* Thumbnails horizontal scroll */}
