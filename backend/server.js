@@ -265,6 +265,16 @@ app.put('/api/orders/:id/status', auth, (req, res) => {
   res.json({ ok: true });
 });
 
+app.put('/api/orders/:id', auth, (req, res) => {
+  const order = db.prepare('SELECT * FROM orders WHERE id=?').get(req.params.id);
+  if (!order) return res.status(404).json({ error: 'Introuvable' });
+  if (req.user.role === 'support' && order.support_id !== req.user.id) return res.status(403).json({ error: 'Non autorisé' });
+  const { client_name, phone, address, city, notes, price, quantity } = req.body;
+  db.prepare('UPDATE orders SET client_name=?, phone=?, address=?, city=?, notes=?, price=?, quantity=? WHERE id=?')
+    .run(client_name, phone, address, city, notes||'', price, quantity, req.params.id);
+  res.json(db.prepare('SELECT * FROM orders WHERE id=?').get(req.params.id));
+});
+
 app.delete('/api/orders/:id', auth, adminOnly, (req, res) => {
   db.prepare('DELETE FROM orders WHERE id=?').run(req.params.id);
   res.json({ ok: true });

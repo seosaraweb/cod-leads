@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api, { getImageUrl } from '../utils/api';
+import EditOrderModal from '../components/EditOrderModal';
 import { useAuth } from '../utils/AuthContext';
 
 const STATUS = ['confirmée','expédiée','livrée','annulée','retournée'];
@@ -20,6 +21,7 @@ export default function Orders() {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
   const [expanded, setExpanded] = useState(null);
+  const [editingOrder, setEditingOrder] = useState(null);
   const today = new Date().toISOString().split('T')[0];
   const [filters, setFilters] = useState({ date_from:today, date_to:today, status:'', search:'', support_id:'' });
   const [showFilters, setShowFilters] = useState(false);
@@ -42,6 +44,10 @@ export default function Orders() {
   const updateStatus = async (id, status) => {
     await api.put(`/orders/${id}/status`, { status });
     setOrders(o => o.map(ord => ord.id===id ? {...ord,status} : ord));
+  };
+
+  const onSave = (updated) => {
+    setOrders(o => o.map(ord => ord.id === updated.id ? updated : ord));
   };
 
   const del = async (id) => {
@@ -188,7 +194,8 @@ export default function Orders() {
                       <td style={{ padding:'8px 12px', color:'#aaa', fontSize:12, whiteSpace:'nowrap' }}>
                         {new Date(o.confirmed_at).toLocaleTimeString('fr-MA',{hour:'2-digit',minute:'2-digit'})}
                       </td>
-                      <td style={{ padding:'8px 10px' }}>
+                      <td style={{ padding:'8px 10px', whiteSpace:'nowrap' }}>
+                        <button onClick={()=>setEditingOrder(o)} style={{ background:'#eff6ff', color:'#2563eb', border:'none', borderRadius:8, padding:'5px 10px', cursor:'pointer', fontSize:13, fontWeight:600, marginRight:4 }}>✏️</button>
                         {user?.role==='admin' && <button onClick={()=>del(o.id)} style={{ background:'none', border:'none', cursor:'pointer', fontSize:16, color:'#e0e0e0', padding:4 }} title="Supprimer">🗑️</button>}
                       </td>
                     </tr>
@@ -235,6 +242,7 @@ export default function Orders() {
                         ))}
                       </div>
                       <div style={{ display:'flex', gap:8 }}>
+                        <button onClick={()=>setEditingOrder(o)} style={{ padding:'10px 14px', background:'#eff6ff', color:'#2563eb', border:'none', borderRadius:10, cursor:'pointer', fontWeight:700, fontSize:14 }}>✏️ Modifier</button>
                         <select value={o.status} onChange={e=>updateStatus(o.id,e.target.value)} style={{ flex:1, padding:'10px', borderRadius:10, border:'1.5px solid #e0e0e0', fontSize:14, background:'#fff' }}>
                           {STATUS.map(s=><option key={s} value={s}>{s}</option>)}
                         </select>
@@ -248,6 +256,7 @@ export default function Orders() {
           </div>
         </>
       )}
+      {editingOrder && <EditOrderModal order={editingOrder} onClose={()=>setEditingOrder(null)} onSave={onSave} />}
     </>
   );
 }
