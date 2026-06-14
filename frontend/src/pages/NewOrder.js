@@ -58,7 +58,7 @@ export default function NewOrder() {
       });
       setSuccess(res.data);
       setStep(STEP.DONE);
-    } catch(e) { setError(e.response?.data?.error || 'Erreur'); }
+    } catch(e) { setError(e.response?.data?.error || e.message || JSON.stringify(e.response?.data) || 'Erreur inconnue'); }
     setLoading(false);
   };
 
