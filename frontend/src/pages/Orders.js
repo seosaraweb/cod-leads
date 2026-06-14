@@ -169,7 +169,10 @@ export default function Orders() {
                             : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>📦</div>}
                         </div>
                       </td>
-                      <td style={{ padding:'8px 12px', fontFamily:'monospace', fontSize:12, fontWeight:700, color:'#2563eb', whiteSpace:'nowrap' }}>{o.order_ref}</td>
+                      <td style={{ padding:'8px 12px', whiteSpace:'nowrap' }}>
+                        <div style={{ fontFamily:'monospace', fontSize:12, fontWeight:700, color:'#2563eb' }}>{o.order_ref}</div>
+                        <button onClick={()=>setEditingOrder(o)} style={{ marginTop:4, background:'#eff6ff', color:'#2563eb', border:'none', borderRadius:7, padding:'4px 10px', cursor:'pointer', fontSize:12, fontWeight:700 }}>✏️ Modifier</button>
+                      </td>
                       <td style={{ padding:'8px 12px' }}>
                         <div style={{ fontWeight:600, fontSize:14, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:200 }}>{o.product_name}</div>
                         <div style={{ display:'flex', gap:4, marginTop:3, flexWrap:'wrap' }}>
