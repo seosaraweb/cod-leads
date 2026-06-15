@@ -344,130 +344,25 @@ app.get('/api/export/xlsx', auth, (req, res) => {
     if (req.user.role === 'support') { query += ' AND support_id = ?'; params.push(req.user.id); }
     const orders = db.prepare(query + ' ORDER BY confirmed_at DESC').all(...params);
 
-    const zlib = require('zlib');
-
-    const esc = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const col = i => String.fromCharCode(65 + i);
-
-    const headers = ['CODE SUIVI','DESTINATAIRE','TELEPHONE','ADRESSE','PRIX','VILLE','COMMENTAIRE','QUARTIER','PRODUIT','VALEUR DECLAREE'];
-    const widths  = [26, 23, 18, 18, 11, 20, 36, 9, 30, 19];
-
-    // Build shared strings table
-    const strs = [];
-    const si = s => { s = String(s==null?'':s); let i = strs.indexOf(s); if(i<0){strs.push(s);i=strs.length-1;} return i; };
-    headers.forEach(h => si(h));
-    orders.forEach(o => {
-      [o.order_ref, o.client_name, String(o.phone||''), o.address||'', o.city||'', o.notes||'', '',
-       o.product_name + (o.variant_label?' - '+o.variant_label:'') + (o.quantity>1?' x'+o.quantity:'')
-      ].forEach(v => si(String(v)));
-    });
-
-    // Sheet rows XML
-    let rowsXml = '<row r="1">' + headers.map((h,ci) => `<c r="${col(ci)}1" t="s" s="1"><v>${si(h)}</v></c>`).join('') + '</row>';
-    orders.forEach((o, ri) => {
-      const r = ri + 2;
-      const produit = o.product_name + (o.variant_label?' - '+o.variant_label:'') + (o.quantity>1?' x'+o.quantity:'');
-      const vals = [o.order_ref, o.client_name, String(o.phone||''), o.address||'', o.price*o.quantity, o.city||'', o.notes||'', '', produit, o.price*o.quantity];
-      rowsXml += '<row r="'+r+'">' + vals.map((v,ci) => {
-        if(ci===4||ci===9) return `<c r="${col(ci)}${r}"><v>${Number(v)||0}</v></c>`;
-        return `<c r="${col(ci)}${r}" t="s"><v>${si(String(v))}</v></c>`;
-      }).join('') + '</row>';
-    });
-
-    const colsXml = widths.map((w,i) => `<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('');
-
-    const files = {
-      '[Content_Types].xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`,
-      '_rels/.rels': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`,
-      'xl/workbook.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Colis" sheetId="1" r:id="rId1"/></sheets></workbook>`,
-      'xl/_rels/workbook.xml.rels': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`,
-      'xl/worksheets/sheet1.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cols>${colsXml}</cols><sheetData>${rowsXml}</sheetData></worksheet>`,
-      'xl/sharedStrings.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${strs.length}" uniqueCount="${strs.length}">${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}</sst>`,
-      'xl/styles.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs></styleSheet>`,
-    };
-
-    // Build ZIP manually using Node.js buffers
-    function crc32(buf) {
-      let crc = 0xFFFFFFFF;
-      for (let i = 0; i < buf.length; i++) {
-        crc ^= buf[i];
-        for (let j = 0; j < 8; j++) crc = (crc >>> 1) ^ (crc & 1 ? 0xEDB88320 : 0);
-      }
-      return (crc ^ 0xFFFFFFFF) >>> 0;
+    const { execFileSync } = require('child_process');
+    const scriptPath = path.join(__dirname, 'generate_xlsx.py');
+    
+    // Try python3 first, then python
+    let xlsxData;
+    try {
+      xlsxData = execFileSync('python3', [scriptPath, JSON.stringify(orders)], { maxBuffer: 50*1024*1024 });
+    } catch(e) {
+      xlsxData = execFileSync('python', [scriptPath, JSON.stringify(orders)], { maxBuffer: 50*1024*1024 });
     }
 
-    function dosDate() {
-      const d = new Date();
-      return ((d.getFullYear()-1980)<<25)|((d.getMonth()+1)<<21)|(d.getDate()<<16)|(d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1);
-    }
-
-    const entries = [];
-    let offset = 0;
-    const parts = [];
-
-    for (const [name, content_str] of Object.entries(files)) {
-      const data = Buffer.from(content_str, 'utf8');
-      const compressed = zlib.deflateRawSync(data, { level: 6 });
-      const crc = crc32(data);
-      const nameB = Buffer.from(name);
-      const date = dosDate();
-
-      // Local file header
-      const lfh = Buffer.alloc(30 + nameB.length);
-      lfh.writeUInt32LE(0x04034b50, 0); // sig
-      lfh.writeUInt16LE(20, 4); // version needed
-      lfh.writeUInt16LE(0, 6); // flags
-      lfh.writeUInt16LE(8, 8); // deflate
-      lfh.writeUInt32LE(date, 10); // date
-      lfh.writeUInt32LE(crc, 14);
-      lfh.writeUInt32LE(compressed.length, 18);
-      lfh.writeUInt32LE(data.length, 22);
-      lfh.writeUInt16LE(nameB.length, 26);
-      lfh.writeUInt16LE(0, 28);
-      nameB.copy(lfh, 30);
-
-      entries.push({ name: nameB, crc, compSize: compressed.length, uncompSize: data.length, offset, date });
-      parts.push(lfh, compressed);
-      offset += lfh.length + compressed.length;
-    }
-
-    // Central directory
-    const cdParts = [];
-    for (const e of entries) {
-      const cd = Buffer.alloc(46 + e.name.length);
-      cd.writeUInt32LE(0x02014b50, 0);
-      cd.writeUInt16LE(20, 4); cd.writeUInt16LE(20, 6);
-      cd.writeUInt16LE(0, 8); cd.writeUInt16LE(8, 10);
-      cd.writeUInt32LE(e.date, 12);
-      cd.writeUInt32LE(e.crc, 16);
-      cd.writeUInt32LE(e.compSize, 20);
-      cd.writeUInt32LE(e.uncompSize, 24);
-      cd.writeUInt16LE(e.name.length, 28);
-      cd.writeUInt16LE(0, 30); cd.writeUInt16LE(0, 32);
-      cd.writeUInt16LE(0, 34); cd.writeUInt16LE(0, 36);
-      cd.writeUInt32LE(0, 38); cd.writeUInt32LE(e.offset, 42);
-      e.name.copy(cd, 46);
-      cdParts.push(cd);
-    }
-
-    const cdBuf = Buffer.concat(cdParts);
-    const eocd = Buffer.alloc(22);
-    eocd.writeUInt32LE(0x06054b50, 0);
-    eocd.writeUInt16LE(0, 4); eocd.writeUInt16LE(0, 6);
-    eocd.writeUInt16LE(entries.length, 8);
-    eocd.writeUInt16LE(entries.length, 10);
-    eocd.writeUInt32LE(cdBuf.length, 12);
-    eocd.writeUInt32LE(offset, 16);
-    eocd.writeUInt16LE(0, 20);
-
-    const zipBuf = Buffer.concat([...parts, cdBuf, eocd]);
     const fname = `colis_${date_from||'all'}.xlsx`;
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="${fname}"`);
-    res.send(zipBuf);
+    res.send(xlsxData);
   } catch(err) {
-    console.error('XLSX error:', err);
-    res.status(500).json({ error: err.message });
+    console.error('XLSX error:', err.message);
+    // Fallback: return error details
+    res.status(500).json({ error: err.message, stderr: err.stderr?.toString() });
   }
 });
 
