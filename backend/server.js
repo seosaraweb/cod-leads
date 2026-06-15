@@ -1,5 +1,5 @@
 const express = require('express');
-const JSZip = require('jszip');
+const ExcelJS = require('exceljs');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
@@ -332,86 +332,65 @@ app.get('/api/export/csv', auth, (req, res) => {
   res.send('\uFEFF' + [headers.join('\t'), ...rows.map(r => r.join('\t'))].join('\n'));
 });
 
-app.get('/api/export/xlsx', auth, (req, res) => {
-  const { date_from, date_to, support_id, city, status } = req.query;
-  let query = 'SELECT * FROM orders WHERE 1=1'; const params = [];
-  if (date_from) { query += ' AND DATE(confirmed_at) >= ?'; params.push(date_from); }
-  if (date_to)   { query += ' AND DATE(confirmed_at) <= ?'; params.push(date_to); }
-  if (support_id) { query += ' AND support_id = ?'; params.push(support_id); }
-  if (city)       { query += ' AND city LIKE ?'; params.push(`%${city}%`); }
-  if (status)     { query += ' AND status = ?'; params.push(status); }
-  if (req.user.role === 'support') { query += ' AND support_id = ?'; params.push(req.user.id); }
-  const orders = db.prepare(query + ' ORDER BY confirmed_at DESC').all(...params);
+app.get('/api/export/xlsx', auth, async (req, res) => {
+  try {
+    const { date_from, date_to, support_id, city, status } = req.query;
+    let query = 'SELECT * FROM orders WHERE 1=1'; const params = [];
+    if (date_from) { query += ' AND DATE(confirmed_at) >= ?'; params.push(date_from); }
+    if (date_to)   { query += ' AND DATE(confirmed_at) <= ?'; params.push(date_to); }
+    if (support_id) { query += ' AND support_id = ?'; params.push(support_id); }
+    if (city)       { query += ' AND city LIKE ?'; params.push(`%${city}%`); }
+    if (status)     { query += ' AND status = ?'; params.push(status); }
+    if (req.user.role === 'support') { query += ' AND support_id = ?'; params.push(req.user.id); }
+    const orders = db.prepare(query + ' ORDER BY confirmed_at DESC').all(...params);
 
-  const esc = (v) => String(v == null ? '' : v)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Colis');
 
-  const headers = ['CODE SUIVI','DESTINATAIRE','TELEPHONE','ADRESSE','PRIX','VILLE','COMMENTAIRE','QUARTIER','PRODUIT','VALEUR DECLAREE'];
-  const colWidths = [26, 23, 18, 18, 11, 20, 36, 9, 30, 19];
+    // Column definitions matching WDV model
+    sheet.columns = [
+      { header: 'CODE SUIVI',      key: 'ref',      width: 26 },
+      { header: 'DESTINATAIRE',    key: 'client',   width: 23 },
+      { header: 'TELEPHONE',       key: 'phone',    width: 18 },
+      { header: 'ADRESSE',         key: 'address',  width: 18 },
+      { header: 'PRIX',            key: 'prix',     width: 11 },
+      { header: 'VILLE',           key: 'ville',    width: 20 },
+      { header: 'COMMENTAIRE',     key: 'notes',    width: 36 },
+      { header: 'QUARTIER',        key: 'quartier', width: 9  },
+      { header: 'PRODUIT',         key: 'produit',  width: 30 },
+      { header: 'VALEUR DECLAREE', key: 'valeur',   width: 19 },
+    ];
 
-  const rows = orders.map(o => [
-    o.order_ref,
-    o.client_name,
-    String(o.phone || ''),
-    o.address || '',
-    o.price * o.quantity,
-    o.city || '',
-    o.notes || '',
-    '',
-    o.product_name + (o.variant_label ? ' - ' + o.variant_label : '') + (o.quantity > 1 ? ' x' + o.quantity : ''),
-    o.price * o.quantity
-  ]);
+    // Style header row
+    sheet.getRow(1).eachCell(cell => {
+      cell.font = { bold: true, name: 'Arial', size: 10 };
+    });
 
-  // Build shared strings
-  const strs = [];
-  const si = (s) => { s = String(s||''); const i = strs.indexOf(s); if(i>=0) return i; strs.push(s); return strs.length-1; };
-  headers.forEach(h => si(h));
-  rows.forEach(row => [0,1,2,3,5,6,7,8].forEach(ci => si(String(row[ci]||''))));
+    // Add data rows
+    orders.forEach(o => {
+      sheet.addRow({
+        ref:      o.order_ref,
+        client:   o.client_name,
+        phone:    String(o.phone || ''),
+        address:  o.address || '',
+        prix:     o.price * o.quantity,
+        ville:    o.city || '',
+        notes:    o.notes || '',
+        quartier: '',
+        produit:  o.product_name + (o.variant_label ? ' - ' + o.variant_label : '') + (o.quantity > 1 ? ' x' + o.quantity : ''),
+        valeur:   o.price * o.quantity,
+      });
+    });
 
-  const col = (i) => i < 26 ? String.fromCharCode(65+i) : 'A'+String.fromCharCode(65+i-26);
-
-  let sheetRows = '';
-  // Header row - bold style (styleId=1)
-  sheetRows += '<row r="1">' + headers.map((h,ci) => `<c r="${col(ci)}1" t="s" s="1"><v>${si(h)}</v></c>`).join('') + '</row>';
-
-  rows.forEach((row, ri) => {
-    const r = ri + 2;
-    sheetRows += '<row r="' + r + '">' + row.map((val, ci) => {
-      if (ci === 4 || ci === 9) return `<c r="${col(ci)}${r}"><v>${Number(val)||0}</v></c>`;
-      return `<c r="${col(ci)}${r}" t="s"><v>${si(String(val||''))}</v></c>`;
-    }).join('') + '</row>';
-  });
-
-  const colsXml = colWidths.map((w,i) => `<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('');
-
-  const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cols>${colsXml}</cols><sheetData>${sheetRows}</sheetData></worksheet>`;
-
-  const ssXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${strs.length}" uniqueCount="${strs.length}">${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}</sst>`;
-
-  const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs></styleSheet>`;
-
-  const wbXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Colis" sheetId="1" r:id="rId1"/></sheets></workbook>`;
-
-  const wbRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`;
-
-  const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`;
-
-  const topRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`;
-
-  const zip = new JSZip();
-  zip.file('[Content_Types].xml', contentTypes);
-  zip.file('_rels/.rels', topRels);
-  zip.file('xl/workbook.xml', wbXml);
-  zip.file('xl/_rels/workbook.xml.rels', wbRels);
-  zip.file('xl/worksheets/sheet1.xml', sheetXml);
-  zip.file('xl/sharedStrings.xml', ssXml);
-  zip.file('xl/styles.xml', stylesXml);
-
-  zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' }).then(buffer => {
+    const fname = `colis_${date_from || 'all'}.xlsx`;
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename="colis_${date_from||'all'}.xlsx"`);
-    res.send(buffer);
-  }).catch(err => res.status(500).json({ error: err.message }));
+    res.setHeader('Content-Disposition', `attachment; filename="${fname}"`);
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch(err) {
+    console.error('XLSX error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
