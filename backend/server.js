@@ -343,119 +343,61 @@ app.get('/api/export/xlsx', auth, (req, res) => {
   if (req.user.role === 'support') { query += ' AND support_id = ?'; params.push(req.user.id); }
   const orders = db.prepare(query + ' ORDER BY confirmed_at DESC').all(...params);
 
-  // Build XLSX manually (OOXML format)
+  const esc = (v) => String(v == null ? '' : v)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+
+  const headers = ['CODE SUIVI','DESTINATAIRE','TELEPHONE','ADRESSE','PRIX','VILLE','COMMENTAIRE','QUARTIER','PRODUIT','VALEUR DECLAREE'];
+  const colWidths = [26, 23, 18, 18, 11, 20, 36, 9, 30, 19];
+
   const rows = orders.map(o => [
     o.order_ref,
     o.client_name,
-    String(o.phone),
-    o.address,
+    String(o.phone || ''),
+    o.address || '',
     o.price * o.quantity,
-    o.city,
+    o.city || '',
     o.notes || '',
-    '', // QUARTIER
-    o.product_name + (o.variant_label ? ` - ${o.variant_label}` : '') + (o.quantity > 1 ? ` x${o.quantity}` : ''),
+    '',
+    o.product_name + (o.variant_label ? ' - ' + o.variant_label : '') + (o.quantity > 1 ? ' x' + o.quantity : ''),
     o.price * o.quantity
   ]);
 
-  const headers = ['CODE SUIVI','DESTINATAIRE','TELEPHONE','ADRESSE','PRIX','VILLE','COMMENTAIRE','QUARTIER','PRODUIT','VALEUR DECLAREE'];
-  const colWidths = [25.85, 22.71, 18.29, 17.86, 10.71, 19.86, 35.57, 8.57, 9.64, 19.1];
+  // Build shared strings
+  const strs = [];
+  const si = (s) => { s = String(s||''); const i = strs.indexOf(s); if(i>=0) return i; strs.push(s); return strs.length-1; };
+  headers.forEach(h => si(h));
+  rows.forEach(row => [0,1,2,3,5,6,7,8].forEach(ci => si(String(row[ci]||''))));
 
-  // Escape XML special chars
-  const esc = (v) => String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const col = (i) => i < 26 ? String.fromCharCode(65+i) : 'A'+String.fromCharCode(65+i-26);
 
-  // Shared strings
-  const strings = [];
-  const strIndex = (s) => { const i = strings.indexOf(s); if (i >= 0) return i; strings.push(s); return strings.length - 1; };
+  let sheetRows = '';
+  // Header row - bold style (styleId=1)
+  sheetRows += '<row r="1">' + headers.map((h,ci) => `<c r="${col(ci)}1" t="s" s="1"><v>${si(h)}</v></c>`).join('') + '</row>';
 
-  // Pre-populate header strings
-  headers.forEach(h => strIndex(h));
-
-  // Pre-populate string cells (non-numeric)
-  rows.forEach(row => {
-    [0,1,2,3,5,6,7,8].forEach(ci => strIndex(String(row[ci] || '')));
-  });
-
-  // Build sheet rows XML
-  const letterCol = (i) => String.fromCharCode(65 + i);
-  let sheetRowsXml = '';
-
-  // Header row
-  sheetRowsXml += '<row r="1">';
-  headers.forEach((h, ci) => {
-    sheetRowsXml += `<c r="${letterCol(ci)}1" t="s" s="1"><v>${strIndex(h)}</v></c>`;
-  });
-  sheetRowsXml += '</row>';
-
-  // Data rows
   rows.forEach((row, ri) => {
     const r = ri + 2;
-    sheetRowsXml += `<row r="${r}">`;
-    row.forEach((val, ci) => {
-      const col = letterCol(ci);
-      if (ci === 4 || ci === 9) {
-        // Numeric
-        sheetRowsXml += `<c r="${col}${r}" s="2"><v>${val}</v></c>`;
-      } else {
-        sheetRowsXml += `<c r="${col}${r}" t="s"><v>${strIndex(String(val||''))}</v></c>`;
-      }
-    });
-    sheetRowsXml += '</row>';
+    sheetRows += '<row r="' + r + '">' + row.map((val, ci) => {
+      if (ci === 4 || ci === 9) return `<c r="${col(ci)}${r}"><v>${Number(val)||0}</v></c>`;
+      return `<c r="${col(ci)}${r}" t="s"><v>${si(String(val||''))}</v></c>`;
+    }).join('') + '</row>';
   });
 
-  const colsXml = colWidths.map((w, i) => `<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('');
+  const colsXml = colWidths.map((w,i) => `<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('');
 
-  const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-<sheetData>${sheetRowsXml}</sheetData>
-<cols>${colsXml}</cols>
-</worksheet>`;
+  const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cols>${colsXml}</cols><sheetData>${sheetRows}</sheetData></worksheet>`;
 
-  const ssXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${strings.length}" uniqueCount="${strings.length}">
-${strings.map(s => `<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
-</sst>`;
+  const ssXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${strs.length}" uniqueCount="${strs.length}">${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}</sst>`;
 
-  const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-<fonts><font><name val="Arial"/><sz val="10"/></font><font><b/><name val="Arial"/><sz val="10"/></font></fonts>
-<fills><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>
-<borders><border><left/><right/><top/><bottom/><diagonal/></border></borders>
-<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs>
-<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
-<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0"/>
-<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
-</cellXfs>
-</styleSheet>`;
+  const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs></styleSheet>`;
 
-  const wbXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-<sheets><sheet name="Colis" sheetId="1" r:id="rId1"/></sheets>
-</workbook>`;
+  const wbXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Colis" sheetId="1" r:id="rId1"/></sheets></workbook>`;
 
-  const wbRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
-<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>
-<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
-</Relationships>`;
+  const wbRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`;
 
-  const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-<Default Extension="xml" ContentType="application/xml"/>
-<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
-<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
-<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
-<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
-</Types>`;
+  const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`;
 
-  const topRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
-</Relationships>`;
+  const topRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`;
 
-  // Build zip in memory
   const zip = new JSZip();
   zip.file('[Content_Types].xml', contentTypes);
   zip.file('_rels/.rels', topRels);
@@ -466,9 +408,8 @@ ${strings.map(s => `<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
   zip.file('xl/styles.xml', stylesXml);
 
   zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' }).then(buffer => {
-    const fname = `colis_${date_from||'all'}_${date_to||''}.xlsx`;
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename="${fname}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="colis_${date_from||'all'}.xlsx"`);
     res.send(buffer);
   }).catch(err => res.status(500).json({ error: err.message }));
 });
