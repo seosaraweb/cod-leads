@@ -344,55 +344,56 @@ app.get('/api/export/xlsx', auth, (req, res) => {
     const orders = db.prepare(query + ' ORDER BY confirmed_at DESC').all(...params);
 
     const zlib = require('zlib');
+    // Use inlineStr instead of shared strings - more compatible with Excel
     const esc = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     const colLetter = i => i<26 ? String.fromCharCode(65+i) : 'A'+String.fromCharCode(65+i-26);
     const HEADERS = ['CODE SUIVI','DESTINATAIRE','TELEPHONE','ADRESSE','PRIX','VILLE','COMMENTAIRE','QUARTIER','PRODUIT','VALEUR DECLAREE'];
     const WIDTHS  = [26, 23, 18, 18, 11, 20, 36, 9, 30, 19];
 
-    const strs = [];
-    const si = s => { s=String(s==null?'':s); let i=strs.indexOf(s); if(i<0){strs.push(s);i=strs.length-1;} return i; };
-    HEADERS.forEach(h=>si(h));
-
-    const rowsData = orders.map(o => [
-      o.order_ref, o.client_name, String(o.phone||''), o.address||'',
-      (o.price||0)*(o.quantity||1), o.city||'', o.notes||'', '',
-      o.product_name+(o.variant_label?` - ${o.variant_label}`:'')+((o.quantity||1)>1?` x${o.quantity}`:''),
-      (o.price||0)*(o.quantity||1)
-    ]);
-    rowsData.forEach(row => row.forEach((v,ci) => { if(ci!==4&&ci!==9) si(String(v)); }));
+    const strCell = (col, row, val) => `<c r="${col}${row}" t="inlineStr"><is><t>${esc(val)}</t></is></c>`;
+    const numCell = (col, row, val) => `<c r="${col}${row}"><v>${Number(val)||0}</v></c>`;
 
     const colsXml = WIDTHS.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('');
-    let rowsXml = `<row r="1">` + HEADERS.map((h,ci)=>`<c r="${colLetter(ci)}1" t="s" s="1"><v>${si(h)}</v></c>`).join('') + `</row>`;
-    rowsData.forEach((row,ri) => {
+    let rowsXml = `<row r="1">` + HEADERS.map((h,ci)=>`<c r="${colLetter(ci)}1" t="inlineStr" s="1"><is><t>${esc(h)}</t></is></c>`).join('') + `</row>`;
+
+    orders.forEach((o, ri) => {
       const r = ri+2;
-      rowsXml += `<row r="${r}">` + row.map((v,ci) => {
-        if(ci===4||ci===9) return `<c r="${colLetter(ci)}${r}"><v>${Number(v)||0}</v></c>`;
-        return `<c r="${colLetter(ci)}${r}" t="s"><v>${si(String(v))}</v></c>`;
+      const produit = o.product_name+(o.variant_label?` - ${o.variant_label}`:'')+((o.quantity||1)>1?` x${o.quantity}`:'');
+      const vals = [
+        o.order_ref, o.client_name, String(o.phone||''), o.address||'',
+        null, o.city||'', o.notes||'', '', produit, null
+      ];
+      const prix = (o.price||0)*(o.quantity||1);
+      rowsXml += `<row r="${r}">` + vals.map((v,ci) => {
+        if(ci===4) return numCell(colLetter(ci), r, prix);
+        if(ci===9) return numCell(colLetter(ci), r, prix);
+        return strCell(colLetter(ci), r, v||'');
       }).join('') + `</row>`;
     });
 
+    const lastRow = orders.length + 1;
+    const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><outlinePr summaryBelow="1" summaryRight="1"/></sheetPr><dimension ref="A1:J${lastRow}"/><sheetViews><sheetView workbookViewId="0"><selection activeCell="A1" sqref="A1"/></sheetView></sheetViews><sheetFormatPr baseColWidth="8" defaultRowHeight="15"/><cols>${colsXml}</cols><sheetData>${rowsXml}</sheetData></worksheet>`;
+
+    const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs></styleSheet>`;
+
     const XML = {
-      '[Content_Types].xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`,
+      '[Content_Types].xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`,
       '_rels/.rels': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`,
       'xl/workbook.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Colis" sheetId="1" r:id="rId1"/></sheets></workbook>`,
-      'xl/_rels/workbook.xml.rels': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`,
-      'xl/worksheets/sheet1.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cols>${colsXml}</cols><sheetData>${rowsXml}</sheetData></worksheet>`,
-      'xl/sharedStrings.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${strs.length}" uniqueCount="${strs.length}">${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}</sst>`,
-      'xl/styles.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs></styleSheet>`,
+      'xl/_rels/workbook.xml.rels': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`,
+      'xl/worksheets/sheet1.xml': sheetXml,
+      'xl/styles.xml': stylesXml,
     };
 
-    // CRC32
     const crcTable = new Uint32Array(256);
     for(let i=0;i<256;i++){let c=i;for(let j=0;j<8;j++)c=(c&1)?0xEDB88320^(c>>>1):(c>>>1);crcTable[i]=c;}
     const crc32 = buf => {let c=0xFFFFFFFF;for(let i=0;i<buf.length;i++)c=crcTable[(c^buf[i])&0xFF]^(c>>>8);return(c^0xFFFFFFFF)>>>0;};
     const w32 = (b,v,o) => {b[o]=v&0xFF;b[o+1]=(v>>8)&0xFF;b[o+2]=(v>>16)&0xFF;b[o+3]=(v>>24)&0xFF;};
     const w16 = (b,v,o) => {b[o]=v&0xFF;b[o+1]=(v>>8)&0xFF;};
-
     const d=new Date();
     const dosDate=((d.getFullYear()-1980)<<25)|((d.getMonth()+1)<<21)|(d.getDate()<<16)|(d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1);
 
-    const parts=[],centrals=[];
-    let pos=0;
+    const parts=[],centrals=[];let pos=0;
     for(const [name,xmlStr] of Object.entries(XML)){
       const raw=Buffer.from(xmlStr,'utf8');
       const comp=zlib.deflateRawSync(raw,{level:6});
@@ -403,10 +404,8 @@ app.get('/api/export/xlsx', auth, (req, res) => {
       w32(lh,crc,14);w32(lh,comp.length,18);w32(lh,raw.length,22);w16(lh,nameB.length,26);w16(lh,0,28);
       nameB.copy(lh,30);
       centrals.push({nameB,crc,compLen:comp.length,rawLen:raw.length,offset:pos});
-      parts.push(lh,comp);
-      pos+=lh.length+comp.length;
+      parts.push(lh,comp);pos+=lh.length+comp.length;
     }
-
     const cdParts=centrals.map(e=>{
       const cd=Buffer.alloc(46+e.nameB.length);
       w32(cd,0x02014b50,0);w16(cd,20,4);w16(cd,20,6);w16(cd,0,8);w16(cd,8,10);w32(cd,dosDate,12);
