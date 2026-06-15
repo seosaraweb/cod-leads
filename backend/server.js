@@ -311,11 +311,24 @@ app.get('/api/export/csv', auth, (req, res) => {
   if (status)     { query += ' AND status = ?'; params.push(status); }
   if (req.user.role === 'support') { query += ' AND support_id = ?'; params.push(req.user.id); }
   const orders = db.prepare(query + ' ORDER BY confirmed_at DESC').all(...params);
-  const headers = ['Référence','Produit','Variante','Client','Téléphone','Adresse','Ville','Prix','Qté','Statut','Support','Date','Notes'];
-  const rows = orders.map(o => [o.order_ref,o.product_name,o.variant_label||'',o.client_name,o.phone,`"${(o.address||'').replace(/"/g,'""')}"`,o.city,o.price,o.quantity,o.status,o.support_name,new Date(o.confirmed_at).toLocaleString('fr-MA'),`"${(o.notes||'').replace(/"/g,'""')}"`]);
+
+  // Format matching WDV model: CODE SUIVI | DESTINATAIRE | TELEPHONE | ADRESSE | PRIX | VILLE | COMMENTAIRE | QUARTIER | PRODUIT | VALEUR DECLAREE
+  const headers = ['CODE SUIVI','DESTINATAIRE','TELEPHONE','ADRESSE','PRIX','VILLE','COMMENTAIRE','QUARTIER','PRODUIT','VALEUR DECLAREE'];
+  const rows = orders.map(o => [
+    o.order_ref,
+    o.client_name,
+    o.phone,
+    `"${(o.address||'').replace(/"/g,'""')}"`,
+    o.price * o.quantity,
+    o.city,
+    `"${(o.notes||'').replace(/"/g,'""')}"`,
+    '', // QUARTIER — vide, à remplir manuellement si besoin
+    o.product_name + (o.variant_label ? ` - ${o.variant_label}` : '') + (o.quantity > 1 ? ` x${o.quantity}` : ''),
+    o.price * o.quantity
+  ]);
   res.setHeader('Content-Type','text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition',`attachment; filename="commandes_${date_from||'all'}.csv"`);
-  res.send('\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n'));
+  res.setHeader('Content-Disposition',`attachment; filename="colis_${date_from||'all'}.csv"`);
+  res.send('\uFEFF' + [headers.join('\t'), ...rows.map(r => r.join('\t'))].join('\n'));
 });
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
