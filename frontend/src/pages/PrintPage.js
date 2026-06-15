@@ -71,7 +71,7 @@ export default function PrintPage() {
           <div style={{ fontSize:13, color:'#888', marginTop:2 }}>{orders.length} étiquettes</div>
         </div>
         <div style={{ display:'flex', gap:8 }}>
-          <button onClick={exportCSV} style={{ padding:'9px 12px', background:'#fff', border:'1.5px solid #e0e0e0', borderRadius:10, cursor:'pointer', fontSize:14 }}>⬇️ CSV</button>
+          <button onClick={exportXLSX} style={{ padding:'9px 16px', background:'#059669', color:'#fff', border:'none', borderRadius:10, cursor:'pointer', fontSize:14, fontWeight:600 }}>⬇️ Excel WDV</button>
           <button onClick={handlePrint} disabled={orders.length===0}
             style={{ padding:'9px 14px', background: orders.length===0?'#93c5fd':'#2563eb', color:'#fff', border:'none', borderRadius:10, cursor:'pointer', fontSize:14, fontWeight:700 }}>
             🖨️ Print

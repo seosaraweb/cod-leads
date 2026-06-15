@@ -331,6 +331,148 @@ app.get('/api/export/csv', auth, (req, res) => {
   res.send('\uFEFF' + [headers.join('\t'), ...rows.map(r => r.join('\t'))].join('\n'));
 });
 
+app.get('/api/export/xlsx', auth, (req, res) => {
+  const { date_from, date_to, support_id, city, status } = req.query;
+  let query = 'SELECT * FROM orders WHERE 1=1'; const params = [];
+  if (date_from) { query += ' AND DATE(confirmed_at) >= ?'; params.push(date_from); }
+  if (date_to)   { query += ' AND DATE(confirmed_at) <= ?'; params.push(date_to); }
+  if (support_id) { query += ' AND support_id = ?'; params.push(support_id); }
+  if (city)       { query += ' AND city LIKE ?'; params.push(`%${city}%`); }
+  if (status)     { query += ' AND status = ?'; params.push(status); }
+  if (req.user.role === 'support') { query += ' AND support_id = ?'; params.push(req.user.id); }
+  const orders = db.prepare(query + ' ORDER BY confirmed_at DESC').all(...params);
+
+  // Build XLSX manually (OOXML format)
+  const rows = orders.map(o => [
+    o.order_ref,
+    o.client_name,
+    String(o.phone),
+    o.address,
+    o.price * o.quantity,
+    o.city,
+    o.notes || '',
+    '', // QUARTIER
+    o.product_name + (o.variant_label ? ` - ${o.variant_label}` : '') + (o.quantity > 1 ? ` x${o.quantity}` : ''),
+    o.price * o.quantity
+  ]);
+
+  const headers = ['CODE SUIVI','DESTINATAIRE','TELEPHONE','ADRESSE','PRIX','VILLE','COMMENTAIRE','QUARTIER','PRODUIT','VALEUR DECLAREE'];
+  const colWidths = [25.85, 22.71, 18.29, 17.86, 10.71, 19.86, 35.57, 8.57, 9.64, 19.1];
+
+  // Escape XML special chars
+  const esc = (v) => String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+  // Shared strings
+  const strings = [];
+  const strIndex = (s) => { const i = strings.indexOf(s); if (i >= 0) return i; strings.push(s); return strings.length - 1; };
+
+  // Pre-populate header strings
+  headers.forEach(h => strIndex(h));
+
+  // Pre-populate string cells (non-numeric)
+  rows.forEach(row => {
+    [0,1,2,3,5,6,7,8].forEach(ci => strIndex(String(row[ci] || '')));
+  });
+
+  // Build sheet rows XML
+  const letterCol = (i) => String.fromCharCode(65 + i);
+  let sheetRowsXml = '';
+
+  // Header row
+  sheetRowsXml += '<row r="1">';
+  headers.forEach((h, ci) => {
+    sheetRowsXml += `<c r="${letterCol(ci)}1" t="s" s="1"><v>${strIndex(h)}</v></c>`;
+  });
+  sheetRowsXml += '</row>';
+
+  // Data rows
+  rows.forEach((row, ri) => {
+    const r = ri + 2;
+    sheetRowsXml += `<row r="${r}">`;
+    row.forEach((val, ci) => {
+      const col = letterCol(ci);
+      if (ci === 4 || ci === 9) {
+        // Numeric
+        sheetRowsXml += `<c r="${col}${r}" s="2"><v>${val}</v></c>`;
+      } else {
+        sheetRowsXml += `<c r="${col}${r}" t="s"><v>${strIndex(String(val||''))}</v></c>`;
+      }
+    });
+    sheetRowsXml += '</row>';
+  });
+
+  const colsXml = colWidths.map((w, i) => `<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('');
+
+  const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<sheetData>${sheetRowsXml}</sheetData>
+<cols>${colsXml}</cols>
+</worksheet>`;
+
+  const ssXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${strings.length}" uniqueCount="${strings.length}">
+${strings.map(s => `<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
+</sst>`;
+
+  const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<fonts><font><name val="Arial"/><sz val="10"/></font><font><b/><name val="Arial"/><sz val="10"/></font></fonts>
+<fills><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>
+<borders><border><left/><right/><top/><bottom/><diagonal/></border></borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0"/>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+</cellXfs>
+</styleSheet>`;
+
+  const wbXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<sheets><sheet name="Colis" sheetId="1" r:id="rId1"/></sheets>
+</workbook>`;
+
+  const wbRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>
+<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`;
+
+  const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
+<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+</Types>`;
+
+  const topRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`;
+
+  // Build zip in memory
+  const JSZip = require('jszip');
+  const zip = new JSZip();
+  zip.file('[Content_Types].xml', contentTypes);
+  zip.file('_rels/.rels', topRels);
+  zip.file('xl/workbook.xml', wbXml);
+  zip.file('xl/_rels/workbook.xml.rels', wbRels);
+  zip.file('xl/worksheets/sheet1.xml', sheetXml);
+  zip.file('xl/sharedStrings.xml', ssXml);
+  zip.file('xl/styles.xml', stylesXml);
+
+  zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' }).then(buffer => {
+    const fname = `colis_${date_from||'all'}_${date_to||''}.xlsx`;
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${fname}"`);
+    res.send(buffer);
+  }).catch(err => res.status(500).json({ error: err.message }));
+});
+
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
 const buildPath = path.join(__dirname, 'public');

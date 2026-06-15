@@ -56,14 +56,14 @@ export default function Orders() {
     setOrders(o => o.filter(x => x.id!==id));
   };
 
-  const exportCSV = () => {
+  const exportXLSX = () => {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([k,v]) => v && params.append(k,v));
     const token = localStorage.getItem('token');
-    fetch(`${process.env.REACT_APP_API_URL||''}/api/export/csv?${params}`, { headers:{ Authorization:`Bearer ${token}` } })
+    fetch(`${process.env.REACT_APP_API_URL||''}/api/export/xlsx?${params}`, { headers:{ Authorization:`Bearer ${token}` } })
       .then(r=>r.blob()).then(blob => {
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-        a.download = 'commandes.csv'; a.click();
+        a.download = `colis_${filters.date_from||'all'}.xlsx`; a.click();
       });
   };
 
@@ -97,7 +97,7 @@ export default function Orders() {
         </div>
         <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
           <button onClick={()=>setShowFilters(f=>!f)} style={{ padding:'9px 16px', background: showFilters?'#eff6ff':'#fff', border:'1.5px solid #e0e0e0', borderRadius:9, cursor:'pointer', fontSize:14, color: showFilters?'#2563eb':'inherit', fontWeight: showFilters?600:400 }}>🔍 Filtres</button>
-          <button onClick={exportCSV} style={{ padding:'9px 16px', background:'#fff', border:'1.5px solid #e0e0e0', borderRadius:9, cursor:'pointer', fontSize:14 }}>⬇️ CSV</button>
+          <button onClick={exportXLSX} style={{ padding:'9px 16px', background:'#059669', color:'#fff', border:'none', borderRadius:9, cursor:'pointer', fontSize:14, fontWeight:600 }}>⬇️ Excel WDV</button>
           <button onClick={()=>navigate('/print',{state:{filters}})} style={{ padding:'9px 16px', background:'#2563eb', color:'#fff', border:'none', borderRadius:9, cursor:'pointer', fontSize:14, fontWeight:600 }}>🖨️ Imprimer</button>
         </div>
       </div>
