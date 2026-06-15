@@ -1,5 +1,5 @@
 [build]
-buildCommand = "pip install openpyxl --break-system-packages && cd frontend && npm install && npm run build && cp -r build ../backend/public && cd ../backend && npm install"
+buildCommand = "cd frontend && npm install && npm run build && cp -r build ../backend/public && cd ../backend && npm install"
 
 [deploy]
 startCommand = "cd backend && node server.js"
