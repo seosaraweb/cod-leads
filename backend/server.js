@@ -332,7 +332,7 @@ app.get('/api/export/csv', auth, (req, res) => {
   res.send('\uFEFF' + [headers.join('\t'), ...rows.map(r => r.join('\t'))].join('\n'));
 });
 
-app.get('/api/export/xlsx', auth, async (req, res) => {
+app.get('/api/export/xlsx', auth, (req, res) => {
   try {
     const { date_from, date_to, support_id, city, status } = req.query;
     let query = 'SELECT * FROM orders WHERE 1=1'; const params = [];
@@ -344,51 +344,16 @@ app.get('/api/export/xlsx', auth, async (req, res) => {
     if (req.user.role === 'support') { query += ' AND support_id = ?'; params.push(req.user.id); }
     const orders = db.prepare(query + ' ORDER BY confirmed_at DESC').all(...params);
 
-    const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet('Colis');
-
-    // Column definitions matching WDV model
-    sheet.columns = [
-      { header: 'CODE SUIVI',      key: 'ref',      width: 26 },
-      { header: 'DESTINATAIRE',    key: 'client',   width: 23 },
-      { header: 'TELEPHONE',       key: 'phone',    width: 18 },
-      { header: 'ADRESSE',         key: 'address',  width: 18 },
-      { header: 'PRIX',            key: 'prix',     width: 11 },
-      { header: 'VILLE',           key: 'ville',    width: 20 },
-      { header: 'COMMENTAIRE',     key: 'notes',    width: 36 },
-      { header: 'QUARTIER',        key: 'quartier', width: 9  },
-      { header: 'PRODUIT',         key: 'produit',  width: 30 },
-      { header: 'VALEUR DECLAREE', key: 'valeur',   width: 19 },
-    ];
-
-    // Style header row
-    sheet.getRow(1).eachCell(cell => {
-      cell.font = { bold: true, name: 'Arial', size: 10 };
-    });
-
-    // Add data rows
-    orders.forEach(o => {
-      sheet.addRow({
-        ref:      o.order_ref,
-        client:   o.client_name,
-        phone:    String(o.phone || ''),
-        address:  o.address || '',
-        prix:     o.price * o.quantity,
-        ville:    o.city || '',
-        notes:    o.notes || '',
-        quartier: '',
-        produit:  o.product_name + (o.variant_label ? ' - ' + o.variant_label : '') + (o.quantity > 1 ? ' x' + o.quantity : ''),
-        valeur:   o.price * o.quantity,
-      });
-    });
+    const { execFileSync } = require('child_process');
+    const scriptPath = path.join(__dirname, 'generate_xlsx.py');
+    const xlsxData = execFileSync('python3', [scriptPath, JSON.stringify(orders)], { maxBuffer: 50 * 1024 * 1024 });
 
     const fname = `colis_${date_from || 'all'}.xlsx`;
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="${fname}"`);
-    await workbook.xlsx.write(res);
-    res.end();
+    res.send(xlsxData);
   } catch(err) {
-    console.error('XLSX error:', err);
+    console.error('XLSX error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
