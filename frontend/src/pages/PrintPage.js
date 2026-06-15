@@ -48,17 +48,14 @@ export default function PrintPage() {
   const exportXLSX = () => {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([k,v]) => v && params.append(k,v));
-    const a = document.createElement('a');
     const token = localStorage.getItem('token');
-    a.href = `${process.env.REACT_APP_API_URL||''}/api/export/csv?${params}`;
-    a.setAttribute('download','');
-    // attach auth
-    fetch(a.href, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.blob()).then(blob => {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url; link.download = 'commandes.csv'; link.click();
-      });
+    params.append('token', token);
+    const a = document.createElement('a');
+    a.href = `${process.env.REACT_APP_API_URL||''}/api/export/xlsx?${params}`;
+    a.download = `colis_${filters.date_from||'all'}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   const inp = { padding:'11px 14px', borderRadius:10, border:'1.5px solid #e0e0e0', fontSize:15, background:'#fff', width:'100%', boxSizing:'border-box' };

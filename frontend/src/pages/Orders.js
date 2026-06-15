@@ -60,11 +60,14 @@ export default function Orders() {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([k,v]) => v && params.append(k,v));
     const token = localStorage.getItem('token');
-    fetch(`${process.env.REACT_APP_API_URL||''}/api/export/xlsx?${params}`, { headers:{ Authorization:`Bearer ${token}` } })
-      .then(r=>r.blob()).then(blob => {
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-        a.download = `colis_${filters.date_from||'all'}.xlsx`; a.click();
-      });
+    params.append('token', token);
+    const url = `${process.env.REACT_APP_API_URL||''}/api/export/xlsx?${params}`;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `colis_${filters.date_from||'all'}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   const total = orders.reduce((s,o) => s+o.price*o.quantity, 0);

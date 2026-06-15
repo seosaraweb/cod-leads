@@ -331,7 +331,13 @@ app.get('/api/export/csv', auth, (req, res) => {
   res.send('\uFEFF' + [headers.join('\t'), ...rows.map(r => r.join('\t'))].join('\n'));
 });
 
-app.get('/api/export/xlsx', auth, (req, res) => {
+app.get('/api/export/xlsx', (req, res, next) => {
+  // Support token via query string for direct download
+  if (req.query.token && !req.headers.authorization) {
+    req.headers.authorization = `Bearer ${req.query.token}`;
+  }
+  next();
+}, auth, (req, res) => {
   try {
     const { date_from, date_to, support_id, city, status } = req.query;
     let query = 'SELECT * FROM orders WHERE 1=1'; const params = [];
