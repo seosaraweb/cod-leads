@@ -1,4 +1,5 @@
 const express = require('express');
+const JSZip = require('jszip');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
@@ -455,7 +456,6 @@ ${strings.map(s => `<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
 </Relationships>`;
 
   // Build zip in memory
-  const JSZip = require('jszip');
   const zip = new JSZip();
   zip.file('[Content_Types].xml', contentTypes);
   zip.file('_rels/.rels', topRels);

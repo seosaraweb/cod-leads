@@ -45,7 +45,7 @@ export default function PrintPage() {
     setTimeout(() => w.print(), 400);
   };
 
-  const exportCSV = () => {
+  const exportXLSX = () => {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([k,v]) => v && params.append(k,v));
     const a = document.createElement('a');
