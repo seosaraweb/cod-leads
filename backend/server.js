@@ -494,10 +494,24 @@ app.get('/og-image/:id', async (req, res) => {
     if (!images[0]) return res.status(404).send('No image');
     const sharp = require('sharp');
     const imgPath = require('path').join(DB_DIR, 'uploads', images[0].filename);
-    const resized = await sharp(imgPath)
-      .resize(1200, 630, { fit: 'contain', background: { r:255, g:255, b:255, alpha:1 } })
-      .jpeg({ quality: 90 })
-      .toBuffer();
+    // Get image metadata to decide strategy
+    const meta = await sharp(imgPath).metadata();
+    const isPortrait = meta.height > meta.width;
+    
+    let resized;
+    if (isPortrait) {
+      // For portrait: fit entire image with white padding
+      resized = await sharp(imgPath)
+        .resize(1200, 630, { fit: 'contain', background: { r:255, g:255, b:255, alpha:1 }, position: 'top' })
+        .jpeg({ quality: 90 })
+        .toBuffer();
+    } else {
+      // For landscape: cover crop centered
+      resized = await sharp(imgPath)
+        .resize(1200, 630, { fit: 'cover', position: 'centre' })
+        .jpeg({ quality: 90 })
+        .toBuffer();
+    }
     res.setHeader('Content-Type', 'image/jpeg');
     res.setHeader('Cache-Control', 'public, max-age=86400');
     res.send(resized);
