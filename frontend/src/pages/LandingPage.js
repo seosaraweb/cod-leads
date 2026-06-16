@@ -287,7 +287,7 @@ export default function LandingPage() {
       {/* Floating WhatsApp button */}
       {whatsapp && (
         <a href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(t.whatsappMsg(product?.name))}`}
-          target="_blank" rel="noreferrer"
+          target="_blank" rel="noreferrer" title=""
           style={{
             position: 'fixed', bottom: 24, right: 24, zIndex: 999,
             width: 60, height: 60, borderRadius: '50%',
