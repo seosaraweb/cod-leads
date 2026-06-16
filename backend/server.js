@@ -487,6 +487,50 @@ app.get('/api/settings/public', (req, res) => {
   res.json({ whatsapp: next, shop_name: shopName?.value || '' });
 });
 
+// ── OG META TAGS pour Messenger/WhatsApp/Facebook ──
+// Facebook/Messenger crawls the URL to get preview — we serve HTML with og tags
+app.get('/p/:id', (req, res, next) => {
+  const ua = req.headers['user-agent'] || '';
+  const isCrawler = /facebookexternalhit|Facebot|WhatsApp|Twitterbot|LinkedInBot|TelegramBot|Slackbot|Discordbot|crawler|bot/i.test(ua);
+  
+  if (!isCrawler) return next(); // Let React handle it for real users
+  
+  const product = db.prepare('SELECT * FROM products WHERE id = ? AND active = 1').get(req.params.id);
+  if (!product) return res.status(404).send('Not found');
+  
+  const images = db.prepare('SELECT * FROM product_images WHERE product_id = ? ORDER BY sort_order LIMIT 1').all(product.id);
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  const imageUrl = images[0] ? `${baseUrl}/uploads/${images[0].filename}` : '';
+  const price = product.base_price;
+  
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>${product.name}</title>
+  <meta property="og:title" content="${product.name}"/>
+  <meta property="og:description" content="🔥 ${price} DH seulement — Paiement à la livraison ✅ — Livraison partout au Maroc 🚚"/>
+  ${imageUrl ? `<meta property="og:image" content="${imageUrl}"/>
+  <meta property="og:image:width" content="800"/>
+  <meta property="og:image:height" content="800"/>` : ''}
+  <meta property="og:url" content="${baseUrl}/p/${product.id}"/>
+  <meta property="og:type" content="product"/>
+  <meta property="og:site_name" content="Lili Discount"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:title" content="${product.name}"/>
+  <meta name="twitter:description" content="🔥 ${price} DH — Paiement à la livraison ✅"/>
+  ${imageUrl ? `<meta name="twitter:image" content="${imageUrl}"/>` : ''}
+</head>
+<body>
+  <h1>${product.name}</h1>
+  <p>${price} DH</p>
+  ${imageUrl ? `<img src="${imageUrl}" style="max-width:100%"/>` : ''}
+</body>
+</html>`;
+  
+  res.send(html);
+});
+
 // ── LANDING PAGE (public) ──
 app.get('/api/landing/:id', (req, res) => {
   const product = db.prepare('SELECT * FROM products WHERE id = ? AND active = 1').get(req.params.id);

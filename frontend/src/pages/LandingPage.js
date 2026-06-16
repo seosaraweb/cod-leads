@@ -107,6 +107,8 @@ export default function LandingPage() {
         setProduct(r.data);
         setActiveImage(r.data.images?.[0] || null);
         if (!r.data.variants?.length) setSelectedVariant({ price: r.data.base_price });
+        // Update page title and meta for social sharing
+        document.title = r.data.name + ' — ' + r.data.base_price + ' DH';
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
