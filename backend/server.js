@@ -495,7 +495,7 @@ app.get('/og-image/:id', async (req, res) => {
     const sharp = require('sharp');
     const imgPath = require('path').join(DB_DIR, 'uploads', images[0].filename);
     const resized = await sharp(imgPath)
-      .resize(1200, 630, { fit: 'cover', position: 'centre' })
+      .resize(1200, 630, { fit: 'contain', background: { r:255, g:255, b:255, alpha:1 } })
       .jpeg({ quality: 90 })
       .toBuffer();
     res.setHeader('Content-Type', 'image/jpeg');
