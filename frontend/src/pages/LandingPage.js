@@ -1,10 +1,10 @@
+import { OZONE_CITIES } from '../utils/ozoneCities';
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import api, { getImageUrl } from '../utils/api';
 
 const imgUrl = f => f ? getImageUrl(`/uploads/${f}`) : null;
 
-const CITIES = ['Casablanca','Rabat','Salé','Fès','Marrakech','Agadir','Tanger','Meknès','Oujda','Kenitra','Tétouan','Safi','Mohammédia','Khouribga','Béni Mellal','El Jadida','Nador','Taza','Settat','Berrechid','Khémisset','Inezgane','Ait Melloul','Larache','Ksar El Kebir','Guelmim','Dakhla','Laâyoune','Errachidia','Ouarzazate','Taroudant','Tiznit','Essaouira','Chefchaouen','Al Hoceima','Berkane','Taourirt','Azrou','Moulay Abdellah','Moulay Yaâcoub','Timoulilt-Béni Mellal','Moulay Bouazza Khenifra','Moulay Bouselham','Moul El Bergui-Safi'].sort();
 
 const T = {
   fr: {
@@ -115,7 +115,7 @@ export default function LandingPage() {
   }, [id]);
 
   const getPrice = () => selectedVariant?.price || product?.base_price || 0;
-  const finalCity = CITIES.includes(form.city) ? form.city : customCity;
+  const finalCity = OZONE_CITIES.some(c => c.NAME === form.city) ? form.city : customCity;
 
   const submit = async () => {
     // Validate each field individually
@@ -280,11 +280,11 @@ export default function LandingPage() {
             <input value={form.client_name} onChange={e=>setForm(f=>({...f,client_name:e.target.value}))} placeholder={t.fullName} style={inp} />
             <input value={form.phone} onChange={e=>setForm(f=>({...f,phone:e.target.value}))} placeholder={t.phone} type="tel" style={inp} />
             <input value={form.address} onChange={e=>setForm(f=>({...f,address:e.target.value}))} placeholder={t.address} style={inp} />
-            <select value={CITIES.includes(form.city)?form.city:(form.city===''?'':'__other__')}
+            <select value={OZONE_CITIES.some(c => c.NAME === form.city)?form.city:(form.city===''?'':'__other__')}
               onChange={e => e.target.value==='__other__' ? setForm(f=>({...f,city:'__other__'})) : setForm(f=>({...f,city:e.target.value}))}
               style={{ ...inp, background:'#fff', color: form.city?'#111':'#999' }}>
               <option value="">{t.city}</option>
-              {CITIES.map(c=><option key={c} value={c}>{c}</option>)}
+              {OZONE_CITIES.map(c=><option key={c.ID} value={c.NAME}>{c.NAME}</option>)}
               <option value="__other__">{t.otherCity}</option>
             </select>
             {form.city==='__other__' && (

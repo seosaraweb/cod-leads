@@ -1,8 +1,8 @@
+import { OZONE_CITIES } from '../utils/ozoneCities';
 import React, { useState, useEffect } from 'react';
 import api, { getImageUrl } from '../utils/api';
 import { useAuth } from '../utils/AuthContext';
 
-const CITIES = ['Casablanca','Rabat','Salé','Fès','Marrakech','Agadir','Tanger','Meknès','Oujda','Kenitra','Tétouan','Safi','Mohammédia','Khouribga','Béni Mellal','El Jadida','Nador','Taza','Settat','Berrechid','Khémisset','Inezgane','Ait Melloul','Larache','Ksar El Kebir','Guelmim','Dakhla','Laâyoune','Errachidia','Ouarzazate','Taroudant','Tiznit','Essaouira','Chefchaouen','Al Hoceima','Berkane','Taourirt','Azrou','Moulay Abdellah','Moulay Yaâcoub','Timoulilt-Béni Mellal','Moulay Bouazza Khenifra','Moulay Bouselham','Moul El Bergui-Safi'].sort();
 const imgUrl = f => f ? getImageUrl(`/uploads/${f}`) : null;
 const STEP = { PRODUCT:1, VARIANT:2, CLIENT:3, DONE:4 };
 
@@ -285,17 +285,17 @@ export default function NewOrder() {
             <div style={{ fontWeight:700, fontSize:14, color:'#666', marginBottom:2 }}>🚚 Livraison</div>
             <input value={form.address} onChange={e=>setForm(f=>({...f,address:e.target.value}))} placeholder="Adresse complète *" style={inp} />
             <select 
-              value={CITIES.includes(form.city) ? form.city : '__other__'} 
+              value={OZONE_CITIES.some(c => c.NAME === form.city) ? form.city : '__other__'} 
               onChange={e => {
                 if (e.target.value === '__other__') setForm(f=>({...f, city:''}));
                 else setForm(f=>({...f, city:e.target.value}));
               }}
               style={{ ...inp, background:'#fff', color: form.city?'#111':'#999' }}>
               <option value="__other__">-- Ville * --</option>
-              {CITIES.map(c=><option key={c} value={c}>{c}</option>)}
+              {OZONE_CITIES.map(c=><option key={c.ID} value={c.NAME}>{c.NAME}</option>)}
               <option value="__other__">✏️ Autre ville (saisir manuellement)</option>
             </select>
-            {!CITIES.includes(form.city) && (
+            {!OZONE_CITIES.some(c => c.NAME === form.city) && (
               <input value={form.city} onChange={e=>setForm(f=>({...f,city:e.target.value}))}
                 placeholder="Nom de la ville *"
                 style={{ ...inp, borderColor:'#f59e0b', background:'#fffbeb' }} />
