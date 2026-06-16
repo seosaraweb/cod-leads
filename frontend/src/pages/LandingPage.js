@@ -87,7 +87,6 @@ export default function LandingPage() {
   const [lang, setLang] = useState(detectLang);
 
   // Lightbox
-  const [lightbox, setLightbox] = useState(null);
   const t = T[lang];
 
   useEffect(() => {
@@ -163,16 +162,7 @@ export default function LandingPage() {
 
   return (
     <div style={{ minHeight:'100vh', background:'#f5f5f0' }} dir={t.dir}>
-      {/* Lightbox — tap anywhere to close, pinch to zoom natively */}
-      {lightbox && (
-        <div onClick={() => setLightbox(null)}
-          style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.96)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', touchAction:'pinch-zoom' }}>
-          <button onClick={() => setLightbox(null)}
-            style={{ position:'absolute', top:16, right:16, background:'rgba(255,255,255,0.15)', border:'none', color:'#fff', width:44, height:44, borderRadius:'50%', fontSize:22, cursor:'pointer', zIndex:1001 }}>✕</button>
-          <img src={imgUrl(lightbox)} alt="" onClick={e => e.stopPropagation()}
-            style={{ maxWidth:'100vw', maxHeight:'100vh', objectFit:'contain', touchAction:'pinch-zoom', userSelect:'none' }} />
-        </div>
-      )}
+
 
       {/* Top bar */}
       <div style={{ background:'#1a1a2e', color:'#fff', padding:'12px 20px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
@@ -193,7 +183,7 @@ export default function LandingPage() {
 
         {/* Main image — tap to open lightbox */}
         <div style={{ borderRadius:18, overflow:'hidden', background:'#f0f0f0', marginBottom:10, boxShadow:'0 2px 16px rgba(0,0,0,0.1)', cursor:'pointer' }}
-          onClick={() => activeImage && setLightbox(activeImage.filename)}>
+          onClick={() => activeImage && window.open(imgUrl(activeImage.filename), '_blank')}>
           {activeImage
             ? <img src={imgUrl(activeImage.filename)} alt={product.name} style={{ width:'100%', display:'block', maxHeight:'70vh', objectFit:'contain' }} />
             : <div style={{ height:300, display:'flex', alignItems:'center', justifyContent:'center', fontSize:80 }}>📦</div>}
