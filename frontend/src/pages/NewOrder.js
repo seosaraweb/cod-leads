@@ -38,6 +38,7 @@ export default function NewOrder() {
     setStep(STEP.CLIENT);
   };
 
+  const getFinalPrice = () => form.customPrice !== undefined && form.customPrice !== '' ? Number(form.customPrice) : (variant?.price || product?.base_price || 0);
   const getPrice = () => variant?.price || product?.base_price || 0;
   const getVariantLabel = () => variant ? [variant.size, variant.color].filter(Boolean).join(' / ') : '';
 
@@ -53,7 +54,7 @@ export default function NewOrder() {
         product_image: imageFilename,
         variant_id: variant?.id || null,
         variant_label: getVariantLabel(),
-        price: getPrice(),
+        price: getFinalPrice(),
         ...form
       });
       setSuccess(res.data);
@@ -225,13 +226,22 @@ export default function NewOrder() {
 
         <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
           <div style={{ background:'#fff', borderRadius:14, padding:'16px' }}>
-            <div style={{ fontWeight:700, fontSize:14, color:'#666', marginBottom:12 }}>📦 Quantité</div>
-            <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+            <div style={{ fontWeight:700, fontSize:14, color:'#666', marginBottom:12 }}>📦 Quantité & Prix</div>
+            <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:16 }}>
               <button onClick={()=>setForm(f=>({...f,quantity:Math.max(1,f.quantity-1)}))} style={{ width:44,height:44,borderRadius:12,border:'2px solid #e5e7eb',background:'#f9f9f9',fontSize:22,cursor:'pointer',fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center' }}>−</button>
               <span style={{ fontSize:28, fontWeight:800, flex:1, textAlign:'center' }}>{form.quantity}</span>
               <button onClick={()=>setForm(f=>({...f,quantity:f.quantity+1}))} style={{ width:44,height:44,borderRadius:12,border:'2px solid #e5e7eb',background:'#f9f9f9',fontSize:22,cursor:'pointer',fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center' }}>+</button>
             </div>
-            <div style={{ textAlign:'center', fontSize:28, fontWeight:900, color:'#059669', marginTop:16 }}>{getPrice()*form.quantity} DH</div>
+            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12 }}>
+              <label style={{ fontSize:14, fontWeight:600, color:'#666', flexShrink:0 }}>Prix unitaire :</label>
+              <div style={{ position:'relative', flex:1 }}>
+                <input value={form.customPrice ?? getPrice()} onChange={e=>setForm(f=>({...f,customPrice:e.target.value}))}
+                  type="number" min="0"
+                  style={{ width:'100%', padding:'10px 40px 10px 14px', borderRadius:10, border:'2px solid #e5e7eb', fontSize:18, fontWeight:700, outline:'none', boxSizing:'border-box' }} />
+                <span style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', color:'#aaa', fontSize:14 }}>DH</span>
+              </div>
+            </div>
+            <div style={{ textAlign:'center', fontSize:28, fontWeight:900, color:'#059669' }}>{((form.customPrice ?? getPrice()) * form.quantity)} DH</div>
           </div>
         </div>
       </div>
@@ -240,7 +250,7 @@ export default function NewOrder() {
 
       <button onClick={confirm} disabled={loading}
         style={{ width:'100%',marginTop:16,padding:'18px',background: loading?'#93c5fd':'#2563eb',color:'#fff',border:'none',borderRadius:16,fontSize:18,fontWeight:800,cursor: loading?'wait':'pointer',boxShadow:'0 4px 16px rgba(37,99,235,0.3)' }}>
-        {loading ? '⏳ Confirmation...' : `✅ Confirmer — ${getPrice()*form.quantity} DH`}
+        {loading ? '⏳ Confirmation...' : `✅ Confirmer — ${getFinalPrice()*form.quantity} DH`}
       </button>
     </div>
   );
