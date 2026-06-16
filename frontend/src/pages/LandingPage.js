@@ -33,7 +33,12 @@ const T = {
     successNote: '📞 Vous serez contacté(e) sous 24h pour confirmer votre livraison',
     fieldProduct: '📦 Produit', fieldPrice: '💰 Prix', fieldCity: '📍 Ville', fieldPhone: '📱 Téléphone',
     errorFill: 'Merci de remplir tous les champs',
-    errorVariant: 'Veuillez choisir une variante',
+    errorVariant: '👆 Veuillez choisir une taille / couleur ci-dessus',
+    errorName: '✏️ Merci d'entrer votre nom complet',
+    errorPhone: '📱 Merci d'entrer votre numéro de téléphone',
+    errorPhoneInvalid: '📱 Numéro de téléphone invalide (minimum 8 chiffres)',
+    errorAddress: '📍 Merci d'entrer votre adresse complète (rue, quartier...)',
+    errorCity: '🏙️ Merci de choisir votre ville',
   },
   ar: {
     dir: 'rtl',
@@ -61,7 +66,12 @@ const T = {
     successNote: '📞 سيتم الاتصال بك خلال 24 ساعة لتأكيد التوصيل',
     fieldProduct: '📦 المنتج', fieldPrice: '💰 السعر', fieldCity: '📍 المدينة', fieldPhone: '📱 الهاتف',
     errorFill: 'يرجى ملء جميع الحقول المطلوبة',
-    errorVariant: 'يرجى اختيار مقاس أو لون',
+    errorVariant: '👆 يرجى اختيار المقاس أو اللون من الخيارات أعلاه',
+    errorName: '✏️ يرجى إدخال اسمك الكامل',
+    errorPhone: '📱 يرجى إدخال رقم هاتفك',
+    errorPhoneInvalid: '📱 رقم الهاتف غير صحيح (8 أرقام على الأقل)',
+    errorAddress: '📍 يرجى إدخال عنوانك الكامل (الشارع، الحي...)',
+    errorCity: '🏙️ يرجى اختيار مدينتك',
   }
 };
 
@@ -106,8 +116,13 @@ export default function LandingPage() {
   const finalCity = CITIES.includes(form.city) ? form.city : customCity;
 
   const submit = async () => {
-    if (!form.client_name || !form.phone || !form.address || !finalCity) return setError(t.errorFill);
+    // Validate each field individually
     if (product.variants?.length > 0 && !selectedVariant) return setError(t.errorVariant);
+    if (!form.client_name) return setError(t.errorName);
+    if (!form.phone) return setError(t.errorPhone);
+    if (form.phone.length < 8) return setError(t.errorPhoneInvalid);
+    if (!form.address) return setError(t.errorAddress);
+    if (!finalCity) return setError(t.errorCity);
     setSubmitting(true); setError('');
     try {
       const variantLabel = selectedVariant ? [selectedVariant.size, selectedVariant.color].filter(Boolean).join(' / ') : '';
@@ -276,7 +291,11 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {error && <div style={{ background:'#fee2e2', color:'#b91c1c', padding:'12px 16px', borderRadius:12, marginBottom:12, fontSize:14, fontWeight:500 }}>{error}</div>}
+        {error && (
+          <div style={{ background:'#fee2e2', color:'#b91c1c', padding:'14px 18px', borderRadius:12, marginBottom:12, fontSize:15, fontWeight:700, border:'2px solid #fca5a5', display:'flex', alignItems:'center', gap:8 }}>
+            {error}
+          </div>
+        )}
 
         <button onClick={submit} disabled={submitting}
           style={{ width:'100%', padding:'18px', background: submitting?'#93c5fd':'#2563eb', color:'#fff', border:'none', borderRadius:16, fontSize:18, fontWeight:900, cursor: submitting?'wait':'pointer', boxShadow:'0 4px 20px rgba(37,99,235,0.35)' }}>
