@@ -4,8 +4,9 @@ import api, { getImageUrl } from '../utils/api';
 import EditOrderModal from '../components/EditOrderModal';
 import { useAuth } from '../utils/AuthContext';
 
-const STATUS = ['confirmée','expédiée','livrée','annulée','retournée'];
+const STATUS = ['en attente','confirmée','expédiée','livrée','annulée','retournée'];
 const S_COLOR = {
+  'en attente': { bg:'#fef3c7', color:'#92400e' },
   confirmée:  { bg:'#d1fae5', color:'#065f46' },
   expédiée:   { bg:'#dbeafe', color:'#1e40af' },
   livrée:     { bg:'#dcfce7', color:'#166534' },

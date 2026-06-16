@@ -73,7 +73,7 @@ db.exec(`
     price REAL DEFAULT 0,
     quantity INTEGER DEFAULT 1,
     notes TEXT DEFAULT '',
-    status TEXT DEFAULT 'confirmée',
+    status TEXT DEFAULT 'en attente',
     support_id INTEGER,
     support_name TEXT NOT NULL,
     confirmed_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -236,7 +236,7 @@ app.post('/api/orders', auth, (req, res) => {
 
   const ref = genRef();
   db.prepare(`INSERT INTO orders (order_ref,product_id,product_name,product_image,variant_id,variant_label,items,client_name,phone,address,city,price,quantity,notes,support_id,support_name) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-    .run(ref, product_id||null, mainName, first.product_image||'', variant_id||null, first.variant_label||'', JSON.stringify(itemsArr), client_name, phone, address, city, totalPrice, 1, notes||'', req.user.id, req.user.username);
+    .run(ref, product_id||null, mainName, first.product_image||'', variant_id||null, first.variant_label||'', JSON.stringify(itemsArr), client_name, phone, address, city, totalPrice, 1, notes||'', req.user.id, req.user.username); // status defaults to 'en attente'
   res.json(db.prepare('SELECT * FROM orders WHERE order_ref = ?').get(ref));
 });
 
@@ -266,7 +266,7 @@ app.get('/api/orders/stats', auth, (req, res) => {
 });
 
 app.put('/api/orders/:id/status', auth, (req, res) => {
-  const valid = ['confirmée','expédiée','livrée','annulée','retournée'];
+  const valid = ['en attente','confirmée','expédiée','livrée','annulée','retournée'];
   if (!valid.includes(req.body.status)) return res.status(400).json({ error: 'Statut invalide' });
   const order = db.prepare('SELECT * FROM orders WHERE id=?').get(req.params.id);
   if (!order) return res.status(404).json({ error: 'Introuvable' });
