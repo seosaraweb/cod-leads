@@ -261,8 +261,16 @@ app.get('/api/orders', auth, (req, res) => {
 
 app.get('/api/orders/stats', auth, (req, res) => {
   const d = req.query.date || new Date().toISOString().split('T')[0];
-  const supportFilter = req.query.support_id;
-  const supportWhere = supportFilter ? ` AND support_id = ${parseInt(supportFilter)}` : '';
+  const supportFilter = req.query.support_id ? parseInt(req.query.support_id) : null;
+  
+  // Helper to run query with optional support filter
+  const q = (sql, params=[]) => {
+    const base = sql + (supportFilter ? ' AND support_id = ?' : '');
+    const p = supportFilter ? [...params, supportFilter] : params;
+    return base.includes('SUM') || base.includes('COUNT') ? 
+      db.prepare(base).get(...p) : db.prepare(base).all(...p);
+  };
+  const supportWhere = supportFilter ? ` AND support_id = ${supportFilter}` : '';
 
   // Revenue today (confirmed + shipped + delivered)
   const revenue = db.prepare(`SELECT SUM(price*quantity) as total FROM orders WHERE DATE(confirmed_at)=? AND status NOT IN ('annulée','retournée')${supportWhere}`).get(d);
@@ -297,9 +305,9 @@ app.get('/api/orders/stats', auth, (req, res) => {
     todayByCity: db.prepare(`SELECT city, COUNT(*) as count FROM orders WHERE DATE(confirmed_at)=? GROUP BY city ORDER BY count DESC LIMIT 10${supportWhere}`).all(d),
     topProducts,
     byHour,
-    totalCount: db.prepare('SELECT COUNT(*) as c FROM orders').get().c,
-    totalByStatus: db.prepare('SELECT status, COUNT(*) as count FROM orders GROUP BY status').all(),
-    totalRevenue: db.prepare("SELECT SUM(price*quantity) as total FROM orders WHERE status NOT IN ('annulée','retournée')").get()?.total || 0,
+    totalCount: db.prepare(`SELECT COUNT(*) as c FROM orders WHERE 1=1${supportWhere}`).get().c,
+    totalByStatus: db.prepare(`SELECT status, COUNT(*) as count FROM orders WHERE 1=1${supportWhere} GROUP BY status`).all(),
+    totalRevenue: db.prepare(`SELECT SUM(price*quantity) as total FROM orders WHERE status NOT IN ('annulée','retournée')${supportWhere}`).get()?.total || 0,
   });
 });
 
