@@ -16,9 +16,15 @@ export default function LandingPage() {
   const [customCity, setCustomCity] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(null);
+  const [whatsapp, setWhatsapp] = useState('');
+  const [shopName, setShopName] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
+    api.get('/settings/public').then(r => {
+      setWhatsapp(r.data.whatsapp || '');
+      setShopName(r.data.shop_name || '');
+    }).catch(() => {});
     api.get(`/landing/${id}`)
       .then(r => {
         setProduct(r.data);
@@ -210,6 +216,17 @@ export default function LandingPage() {
         <p style={{ textAlign:'center', fontSize:13, color:'#aaa', marginTop:12 }}>
           Vous serez contacté(e) pour confirmer avant livraison
         </p>
+
+        {whatsapp && (
+          <div style={{ marginTop:16 }}>
+            <div style={{ textAlign:'center', fontSize:13, color:'#aaa', marginBottom:10 }}>— ou contactez-nous directement —</div>
+            <a href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(`Bonjour, je suis intéressé(e) par ${product?.name}`)}`}
+              target="_blank" rel="noreferrer"
+              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, background:'#25d366', color:'#fff', padding:'15px', borderRadius:14, textDecoration:'none', fontWeight:700, fontSize:16, boxShadow:'0 4px 16px rgba(37,211,102,0.3)' }}>
+              <span style={{ fontSize:24 }}>💬</span> Contacter sur WhatsApp
+            </a>
+          </div>
+        )}
       </div>
     </div>
   );

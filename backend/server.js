@@ -80,6 +80,12 @@ db.exec(`
   );
 `);
 
+// Settings table
+db.exec(`CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT DEFAULT ''
+);`);
+
 // Migrations — add columns if they don't exist
 try { db.exec("ALTER TABLE orders ADD COLUMN product_image TEXT DEFAULT ''"); } catch(e) {}
 try { db.exec("ALTER TABLE orders ADD COLUMN variant_id INTEGER"); } catch(e) {}
@@ -443,6 +449,26 @@ app.get('/api/export/xlsx', (req, res, next) => {
     console.error('XLSX error:', err);
     res.status(500).json({ error: err.message });
   }
+});
+
+// ── SETTINGS ──
+app.get('/api/settings', auth, adminOnly, (req, res) => {
+  const rows = db.prepare('SELECT key, value FROM settings').all();
+  const obj = {};
+  rows.forEach(r => obj[r.key] = r.value);
+  res.json(obj);
+});
+
+app.put('/api/settings', auth, adminOnly, (req, res) => {
+  const stmt = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
+  Object.entries(req.body).forEach(([k, v]) => stmt.run(k, v));
+  res.json({ ok: true });
+});
+
+// Public settings (whatsapp only)
+app.get('/api/settings/public', (req, res) => {
+  const wa = db.prepare("SELECT value FROM settings WHERE key = 'whatsapp'").get();
+  res.json({ whatsapp: wa?.value || '' });
 });
 
 // ── LANDING PAGE (public) ──

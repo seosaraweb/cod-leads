@@ -11,6 +11,7 @@ import PrintPage from './pages/PrintPage';
 import Stats from './pages/Stats';
 import Products from './pages/Products';
 import Users from './pages/Users';
+import Settings from './pages/Settings';
 
 function ProtectedRoute({ children, adminOnly = false }) {
   const { user } = useAuth();
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="/backoffice/products" element={<ProtectedRoute adminOnly><Products /></ProtectedRoute>} />
           <Route path="/backoffice/users" element={<ProtectedRoute adminOnly><Users /></ProtectedRoute>} />
           <Route path="/backoffice/landing-pages" element={<ProtectedRoute adminOnly><LandingPages /></ProtectedRoute>} />
+          <Route path="/backoffice/settings" element={<ProtectedRoute adminOnly><Settings /></ProtectedRoute>} />
 
           {/* Tout le reste = 404 */}
           <Route path="*" element={<NotFound />} />
