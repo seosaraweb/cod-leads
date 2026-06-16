@@ -84,6 +84,7 @@ db.exec(`
 try { db.exec("ALTER TABLE orders ADD COLUMN product_image TEXT DEFAULT ''"); } catch(e) {}
 try { db.exec("ALTER TABLE orders ADD COLUMN variant_id INTEGER"); } catch(e) {}
 try { db.exec("ALTER TABLE orders ADD COLUMN variant_label TEXT DEFAULT ''"); } catch(e) {}
+try { db.exec("ALTER TABLE orders ADD COLUMN items TEXT DEFAULT '[]'"); } catch(e) {}
 
 if (!db.prepare('SELECT id FROM users WHERE username = ?').get('admin')) {
   db.prepare('INSERT INTO users (username, password, role) VALUES (?, ?, ?)').run('admin', bcrypt.hashSync('admin123', 10), 'admin');
@@ -221,12 +222,21 @@ app.post('/api/products/:id/variants', auth, adminOnly, (req, res) => {
 
 // ── ORDERS ──
 app.post('/api/orders', auth, (req, res) => {
-  const { product_id, product_name, product_image, variant_id, variant_label, client_name, phone, address, city, price, quantity, notes } = req.body;
-  if (!client_name || !phone || !address || !city || !product_name)
+  const { product_id, product_name, product_image, variant_id, variant_label, items, client_name, phone, address, city, price, quantity, notes } = req.body;
+  if (!client_name || !phone || !address || !city)
     return res.status(400).json({ error: 'Champs obligatoires manquants' });
+
+  // items = array of {product_name, variant_label, price, quantity, product_image}
+  const itemsArr = items && items.length > 0 ? items : [{product_name: product_name||'', variant_label: variant_label||'', price: price||0, quantity: quantity||1, product_image: product_image||''}];
+  
+  // First item = main product info for backward compat
+  const first = itemsArr[0];
+  const totalPrice = itemsArr.reduce((s, i) => s + (i.price * i.quantity), 0);
+  const mainName = itemsArr.length === 1 ? first.product_name : itemsArr.map(i => `${i.product_name}${i.variant_label?' ('+i.variant_label+')':''}${i.quantity>1?' x'+i.quantity:''}`).join(' + ');
+
   const ref = genRef();
-  db.prepare(`INSERT INTO orders (order_ref,product_id,product_name,product_image,variant_id,variant_label,client_name,phone,address,city,price,quantity,notes,support_id,support_name) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-    .run(ref, product_id||null, product_name, product_image||'', variant_id||null, variant_label||'', client_name, phone, address, city, price||0, quantity||1, notes||'', req.user.id, req.user.username);
+  db.prepare(`INSERT INTO orders (order_ref,product_id,product_name,product_image,variant_id,variant_label,items,client_name,phone,address,city,price,quantity,notes,support_id,support_name) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+    .run(ref, product_id||null, mainName, first.product_image||'', variant_id||null, first.variant_label||'', JSON.stringify(itemsArr), client_name, phone, address, city, totalPrice, 1, notes||'', req.user.id, req.user.username);
   res.json(db.prepare('SELECT * FROM orders WHERE order_ref = ?').get(ref));
 });
 
