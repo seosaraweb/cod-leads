@@ -12,7 +12,6 @@ export default function LandingPages() {
     api.get('/products/all').then(r => setProducts(r.data)).catch(() => {});
   }, []);
 
-  const [copyLang, setCopyLang] = useState('fr');
 
   const getMessage = (p, lang) => {
     const url = `${window.location.origin}/p/${p.id}`;
