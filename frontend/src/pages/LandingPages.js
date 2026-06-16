@@ -16,36 +16,32 @@ export default function LandingPages() {
 
   const getMessage = (p, lang) => {
     const url = `${window.location.origin}/p/${p.id}`;
-    const price = p.variants?.length > 0
-      ? `à partir de ${Math.min(...p.variants.map(v => v.price || p.base_price))} DH`
-      : `${p.base_price} DH`;
+    const minPrice = p.variants?.length > 0
+      ? Math.min(...p.variants.map(v => Number(v.price) || Number(p.base_price)))
+      : Number(p.base_price);
 
     if (lang === 'ar') {
-      return `🛍️ *${p.name}*
+      return `واش شفتي هاد الموديل 😍
 
-✨ منتج حصري بسعر مميز — ${price.replace('à partir de','ابتداء من').replace('DH','درهم')}
+*${p.name}*
 
-✅ الدفع عند الاستلام
-🚚 توصيل لجميع مدن المغرب
-📦 ضمان الجودة
+بسعر ${minPrice} درهم فقط 🔥
+الدفع عند الاستلام ✅
+التوصيل لعندك 🚚
 
-👇 اطلب الآن من هنا:
-${url}
-
-⚡ الكميات محدودة — لا تفوّت الفرصة!`;
+شوفي وطلبي من هنا 👇
+${url}`;
     }
-    return `🛍️ *${p.name}*
+    return `T'as vu ce modèle ? 😍
 
-✨ Produit exclusif à un prix imbattable — ${price}
+*${p.name}*
 
-✅ Paiement à la livraison
-🚚 Livraison partout au Maroc
-📦 Qualité garantie
+Seulement ${minPrice} DH 🔥
+Paiement à la livraison ✅
+Livraison chez toi 🚚
 
-👇 Commandez maintenant ici :
-${url}
-
-⚡ Quantités limitées — Ne ratez pas cette offre !`;
+Regarde et commande ici 👇
+${url}`;
   };
 
   const copyMessage = (p, lang) => {
