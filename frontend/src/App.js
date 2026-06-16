@@ -14,9 +14,20 @@ import Users from './pages/Users';
 
 function ProtectedRoute({ children, adminOnly = false }) {
   const { user } = useAuth();
-  if (!user) return <Navigate to="/login" replace />;
-  if (adminOnly && user.role !== 'admin') return <Navigate to="/" replace />;
+  if (!user) return <Navigate to="/backoffice/login" replace />;
+  if (adminOnly && user.role !== 'admin') return <Navigate to="/backoffice" replace />;
   return <Layout>{children}</Layout>;
+}
+
+function NotFound() {
+  return (
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#f5f5f0' }}>
+      <div style={{ textAlign:'center', color:'#ccc' }}>
+        <div style={{ fontSize:80, fontWeight:900, color:'#e5e7eb' }}>404</div>
+        <div style={{ fontSize:16, color:'#aaa', marginTop:8 }}>Page introuvable</div>
+      </div>
+    </div>
+  );
 }
 
 export default function App() {
@@ -24,16 +35,21 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/" element={<ProtectedRoute><NewOrder /></ProtectedRoute>} />
-          <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
-          <Route path="/print" element={<ProtectedRoute><PrintPage /></ProtectedRoute>} />
-          <Route path="/stats" element={<ProtectedRoute adminOnly><Stats /></ProtectedRoute>} />
-          <Route path="/products" element={<ProtectedRoute adminOnly><Products /></ProtectedRoute>} />
-          <Route path="/users" element={<ProtectedRoute adminOnly><Users /></ProtectedRoute>} />
+          {/* Landing pages publiques */}
           <Route path="/p/:id" element={<LandingPage />} />
-          <Route path="/landing-pages" element={<ProtectedRoute adminOnly><LandingPages /></ProtectedRoute>} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+
+          {/* Dashboard sous URL secrète /backoffice */}
+          <Route path="/backoffice/login" element={<Login />} />
+          <Route path="/backoffice" element={<ProtectedRoute><NewOrder /></ProtectedRoute>} />
+          <Route path="/backoffice/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+          <Route path="/backoffice/print" element={<ProtectedRoute><PrintPage /></ProtectedRoute>} />
+          <Route path="/backoffice/stats" element={<ProtectedRoute adminOnly><Stats /></ProtectedRoute>} />
+          <Route path="/backoffice/products" element={<ProtectedRoute adminOnly><Products /></ProtectedRoute>} />
+          <Route path="/backoffice/users" element={<ProtectedRoute adminOnly><Users /></ProtectedRoute>} />
+          <Route path="/backoffice/landing-pages" element={<ProtectedRoute adminOnly><LandingPages /></ProtectedRoute>} />
+
+          {/* Tout le reste = 404 */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

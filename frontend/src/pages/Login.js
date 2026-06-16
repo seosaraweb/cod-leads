@@ -12,7 +12,7 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setLoading(true); setError('');
-    try { await login(username, password); navigate('/'); }
+    try { await login(username, password); navigate('/backoffice'); }
     catch (err) { setError(err.response?.data?.error || 'Identifiants incorrects'); }
     finally { setLoading(false); }
   };

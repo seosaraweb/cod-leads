@@ -3,13 +3,13 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../utils/AuthContext';
 
 const NAV = [
-  { path: '/', icon: '✅', label: 'Confirmer', roles: ['support','admin'] },
-  { path: '/orders', icon: '📋', label: 'Commandes', roles: ['support','admin'] },
-  { path: '/print', icon: '🖨️', label: 'Imprimer', roles: ['support','admin'] },
-  { path: '/stats', icon: '📊', label: 'Stats', roles: ['admin'] },
-  { path: '/products', icon: '📦', label: 'Produits', roles: ['admin'] },
-  { path: '/landing-pages', icon: '🔗', label: 'Landing Pages', roles: ['admin'] },
-  { path: '/users', icon: '👥', label: 'Équipe', roles: ['admin'] },
+  { path: '/backoffice', icon: '✅', label: 'Confirmer', roles: ['support','admin'] },
+  { path: '/backoffice/orders', icon: '📋', label: 'Commandes', roles: ['support','admin'] },
+  { path: '/backoffice/print', icon: '🖨️', label: 'Imprimer', roles: ['support','admin'] },
+  { path: '/backoffice/stats', icon: '📊', label: 'Stats', roles: ['admin'] },
+  { path: '/backoffice/products', icon: '📦', label: 'Produits', roles: ['admin'] },
+  { path: '/backoffice/landing-pages', icon: '🔗', label: 'Landing Pages', roles: ['admin'] },
+  { path: '/backoffice/users', icon: '👥', label: 'Équipe', roles: ['admin'] },
 ];
 
 export default function Layout({ children }) {
@@ -18,7 +18,7 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const navItems = NAV.filter(n => n.roles.includes(user?.role));
-  const handleLogout = () => { logout(); navigate('/login'); };
+  const handleLogout = () => { logout(); navigate('/backoffice/login'); };
 
   return (
     <div style={{ display:'flex', minHeight:'100vh', background:'#f0f0eb' }}>
