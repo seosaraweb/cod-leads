@@ -303,17 +303,33 @@ export default function LandingPage() {
         </button>
         <p style={{ textAlign:'center', fontSize:13, color:'#aaa', marginTop:12 }}>{t.confirm}</p>
 
-        {whatsapp && (
-          <div style={{ marginTop:16 }}>
-            <div style={{ textAlign:'center', fontSize:13, color:'#aaa', marginBottom:10 }}>{t.contactUs}</div>
-            <a href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(t.whatsappMsg(product?.name))}`}
-              target="_blank" rel="noreferrer"
-              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, background:'#25d366', color:'#fff', padding:'15px', borderRadius:14, textDecoration:'none', fontWeight:700, fontSize:16, boxShadow:'0 4px 16px rgba(37,211,102,0.3)' }}>
-              <span style={{ fontSize:24 }}>💬</span> {t.whatsappBtn}
-            </a>
-          </div>
-        )}
+
       </div>
+
+      {/* Floating WhatsApp button */}
+      {whatsapp && (
+        <a href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(t.whatsappMsg(product?.name))}`}
+          target="_blank" rel="noreferrer"
+          style={{
+            position: 'fixed', bottom: 24, right: 24, zIndex: 999,
+            width: 60, height: 60, borderRadius: '50%',
+            background: '#25d366', color: '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 30, textDecoration: 'none',
+            boxShadow: '0 4px 20px rgba(37,211,102,0.5)',
+            animation: 'pulse 2s infinite'
+          }}>
+          💬
+        </a>
+      )}
+
+      <style>{`
+        @keyframes pulse {
+          0% { box-shadow: 0 4px 20px rgba(37,211,102,0.5); }
+          50% { box-shadow: 0 4px 32px rgba(37,211,102,0.8), 0 0 0 8px rgba(37,211,102,0.15); }
+          100% { box-shadow: 0 4px 20px rgba(37,211,102,0.5); }
+        }
+      `}</style>
     </div>
   );
 }
