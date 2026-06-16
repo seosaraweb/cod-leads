@@ -465,10 +465,26 @@ app.put('/api/settings', auth, adminOnly, (req, res) => {
   res.json({ ok: true });
 });
 
-// Public settings (whatsapp only)
+// Get next whatsapp number in FIFO rotation
+function getNextWhatsapp() {
+  const numbersRaw = db.prepare("SELECT value FROM settings WHERE key = 'whatsapp_numbers'").get();
+  if (!numbersRaw?.value) return '';
+  const numbers = JSON.parse(numbersRaw.value).filter(n => n && n.trim());
+  if (numbers.length === 0) return '';
+  if (numbers.length === 1) return numbers[0];
+  // Get and increment counter
+  const counterRow = db.prepare("SELECT value FROM settings WHERE key = 'whatsapp_counter'").get();
+  const counter = parseInt(counterRow?.value || '0');
+  const next = numbers[counter % numbers.length];
+  db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('whatsapp_counter', ?)").run(String(counter + 1));
+  return next;
+}
+
+// Public settings (whatsapp rotation)
 app.get('/api/settings/public', (req, res) => {
-  const wa = db.prepare("SELECT value FROM settings WHERE key = 'whatsapp'").get();
-  res.json({ whatsapp: wa?.value || '' });
+  const shopName = db.prepare("SELECT value FROM settings WHERE key = 'shop_name'").get();
+  const next = getNextWhatsapp();
+  res.json({ whatsapp: next, shop_name: shopName?.value || '' });
 });
 
 // ── LANDING PAGE (public) ──
