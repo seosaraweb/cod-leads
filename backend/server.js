@@ -487,6 +487,25 @@ app.get('/api/settings/public', (req, res) => {
   res.json({ whatsapp: next, shop_name: shopName?.value || '' });
 });
 
+// ── OG IMAGE resizée 1200x630 pour Facebook/Messenger ──
+app.get('/og-image/:id', async (req, res) => {
+  try {
+    const images = db.prepare('SELECT * FROM product_images WHERE product_id = ? ORDER BY sort_order LIMIT 1').all(req.params.id);
+    if (!images[0]) return res.status(404).send('No image');
+    const sharp = require('sharp');
+    const imgPath = require('path').join(DB_DIR, 'uploads', images[0].filename);
+    const resized = await sharp(imgPath)
+      .resize(1200, 630, { fit: 'cover', position: 'centre' })
+      .jpeg({ quality: 90 })
+      .toBuffer();
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.send(resized);
+  } catch(e) {
+    res.status(500).send('Error');
+  }
+});
+
 // ── OG META TAGS pour Messenger/WhatsApp/Facebook ──
 // Facebook/Messenger crawls the URL to get preview — we serve HTML with og tags
 app.get('/p/:id', (req, res, next) => {
@@ -500,7 +519,7 @@ app.get('/p/:id', (req, res, next) => {
   
   const images = db.prepare('SELECT * FROM product_images WHERE product_id = ? ORDER BY sort_order LIMIT 1').all(product.id);
   const baseUrl = `${req.protocol}://${req.get('host')}`;
-  const imageUrl = images[0] ? `${baseUrl}/uploads/${images[0].filename}` : '';
+  const imageUrl = images[0] ? `${baseUrl}/og-image/${product.id}` : '';
   const price = product.base_price;
   
   const html = `<!DOCTYPE html>
@@ -509,10 +528,11 @@ app.get('/p/:id', (req, res, next) => {
   <meta charset="utf-8"/>
   <title>${product.name}</title>
   <meta property="og:title" content="${product.name}"/>
-  <meta property="og:description" content="🔥 ${price} DH seulement — Paiement à la livraison ✅ — Livraison partout au Maroc 🚚"/>
+  <meta property="og:description" content="🔥 Prix: ${price} DH — ✅ Paiement à la livraison — 🚚 Livraison 1-3 jours partout au Maroc — Commandez maintenant !"/>
   ${imageUrl ? `<meta property="og:image" content="${imageUrl}"/>
-  <meta property="og:image:width" content="800"/>
-  <meta property="og:image:height" content="800"/>` : ''}
+  <meta property="og:image:width" content="1200"/>
+  <meta property="og:image:height" content="630"/>
+  <meta property="og:image:type" content="image/jpeg"/>` : ''}
   <meta property="og:url" content="${baseUrl}/p/${product.id}"/>
   <meta property="og:type" content="product"/>
   <meta property="og:site_name" content="Lili Discount"/>
