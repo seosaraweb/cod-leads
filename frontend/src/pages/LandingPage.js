@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import api, { getImageUrl } from '../utils/api';
 
@@ -88,10 +88,6 @@ export default function LandingPage() {
 
   // Lightbox
   const [lightbox, setLightbox] = useState(null);
-  const [scale, setScale] = useState(1);
-  const [pinchStart, setPinchStart] = useState(null);
-  const imgRef = useRef();
-
   const t = T[lang];
 
   useEffect(() => {
@@ -128,24 +124,7 @@ export default function LandingPage() {
     setSubmitting(false);
   };
 
-  // Pinch-to-zoom handlers
-  const handleTouchStart = (e) => {
-    if (e.touches.length === 2) {
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      setPinchStart(Math.hypot(dx, dy));
-    }
-  };
-  const handleTouchMove = (e) => {
-    if (e.touches.length === 2 && pinchStart) {
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      const dist = Math.hypot(dx, dy);
-      setScale(s => Math.min(4, Math.max(1, s * (dist / pinchStart))));
-      setPinchStart(dist);
-    }
-  };
-  const handleTouchEnd = () => setPinchStart(null);
+
 
   if (loading) return <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center' }}><div style={{ fontSize:40 }}>⏳</div></div>;
   if (notFound) return <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:16 }}><div style={{ fontSize:64 }}>😕</div><div style={{ fontSize:20, fontWeight:700, color:'#555' }}>Produit introuvable</div></div>;
@@ -175,24 +154,14 @@ export default function LandingPage() {
 
   return (
     <div style={{ minHeight:'100vh', background:'#f5f5f0' }} dir={t.dir}>
-      {/* Lightbox */}
+      {/* Lightbox — tap anywhere to close, pinch to zoom natively */}
       {lightbox && (
-        <div onClick={() => { setLightbox(null); setScale(1); }}
-          style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.95)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center' }}>
-          <button onClick={(e) => { e.stopPropagation(); setLightbox(null); setScale(1); }}
-            style={{ position:'absolute', top:16, right:16, background:'rgba(255,255,255,0.2)', border:'none', color:'#fff', width:44, height:44, borderRadius:'50%', fontSize:24, cursor:'pointer', zIndex:1001 }}>✕</button>
-          <div style={{ position:'absolute', bottom:20, left:'50%', transform:'translateX(-50%)', display:'flex', gap:12, zIndex:1001 }}>
-            <button onClick={e => { e.stopPropagation(); setScale(s => Math.max(1, s - 0.5)); }}
-              style={{ background:'rgba(255,255,255,0.2)', border:'none', color:'#fff', width:44, height:44, borderRadius:'50%', fontSize:22, cursor:'pointer', fontWeight:700 }}>−</button>
-            <button onClick={e => { e.stopPropagation(); setScale(1); }}
-              style={{ background:'rgba(255,255,255,0.2)', border:'none', color:'#fff', padding:'0 16px', borderRadius:22, fontSize:14, cursor:'pointer' }}>{Math.round(scale*100)}%</button>
-            <button onClick={e => { e.stopPropagation(); setScale(s => Math.min(4, s + 0.5)); }}
-              style={{ background:'rgba(255,255,255,0.2)', border:'none', color:'#fff', width:44, height:44, borderRadius:'50%', fontSize:22, cursor:'pointer', fontWeight:700 }}>+</button>
-          </div>
-          <div onClick={e => e.stopPropagation()} style={{ overflow:'hidden', maxWidth:'95vw', maxHeight:'85vh', display:'flex', alignItems:'center', justifyContent:'center' }}
-            onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
-            <img ref={imgRef} src={imgUrl(lightbox)} alt="" style={{ maxWidth:'95vw', maxHeight:'85vh', objectFit:'contain', transform:`scale(${scale})`, transformOrigin:'center', transition: pinchStart ? 'none' : 'transform 0.2s', userSelect:'none' }} />
-          </div>
+        <div onClick={() => setLightbox(null)}
+          style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.96)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', touchAction:'pinch-zoom' }}>
+          <button onClick={() => setLightbox(null)}
+            style={{ position:'absolute', top:16, right:16, background:'rgba(255,255,255,0.15)', border:'none', color:'#fff', width:44, height:44, borderRadius:'50%', fontSize:22, cursor:'pointer', zIndex:1001 }}>✕</button>
+          <img src={imgUrl(lightbox)} alt="" onClick={e => e.stopPropagation()}
+            style={{ maxWidth:'100vw', maxHeight:'100vh', objectFit:'contain', touchAction:'pinch-zoom', userSelect:'none' }} />
         </div>
       )}
 
