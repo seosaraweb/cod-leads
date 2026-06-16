@@ -8,7 +8,7 @@ const NAV = [
   { path: '/backoffice/print', icon: '🖨️', label: 'Imprimer', roles: ['support','admin'] },
   { path: '/backoffice/stats', icon: '📊', label: 'Stats', roles: ['admin'] },
   { path: '/backoffice/products', icon: '📦', label: 'Produits', roles: ['admin'] },
-  { path: '/backoffice/landing-pages', icon: '🔗', label: 'Landing Pages', roles: ['admin'] },
+  { path: '/backoffice/landing-pages', icon: '🔗', label: 'Landing Pages', roles: ['admin', 'support'] },
   { path: '/backoffice/users', icon: '👥', label: 'Équipe', roles: ['admin'] },
   { path: '/backoffice/settings', icon: '⚙️', label: 'Paramètres', roles: ['admin'] },
 ];
