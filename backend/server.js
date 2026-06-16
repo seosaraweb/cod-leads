@@ -445,6 +445,26 @@ app.get('/api/export/xlsx', (req, res, next) => {
   }
 });
 
+// ── LANDING PAGE (public) ──
+app.get('/api/landing/:id', (req, res) => {
+  const product = db.prepare('SELECT * FROM products WHERE id = ? AND active = 1').get(req.params.id);
+  if (!product) return res.status(404).json({ error: 'Produit introuvable' });
+  const images = db.prepare('SELECT * FROM product_images WHERE product_id = ? ORDER BY sort_order').all(product.id);
+  const variants = db.prepare('SELECT * FROM product_variants WHERE product_id = ? ORDER BY sort_order').all(product.id);
+  res.json({ ...product, images, variants });
+});
+
+app.post('/api/landing/order', (req, res) => {
+  const { product_id, product_name, product_image, variant_id, variant_label, client_name, phone, address, city, price, quantity, notes } = req.body;
+  if (!client_name || !phone || !address || !city || !product_name)
+    return res.status(400).json({ error: 'Champs obligatoires manquants' });
+  const ref = genRef();
+  // Landing orders use 'en attente' status and support_name = 'Landing Page'
+  db.prepare(`INSERT INTO orders (order_ref,product_id,product_name,product_image,variant_id,variant_label,client_name,phone,address,city,price,quantity,notes,status,support_id,support_name) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'en attente',0,'Landing Page')`)
+    .run(ref, product_id||null, product_name, product_image||'', variant_id||null, variant_label||'', client_name, phone, address, city, price||0, quantity||1, notes||'');
+  res.json(db.prepare('SELECT * FROM orders WHERE order_ref = ?').get(ref));
+});
+
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
 const buildPath = path.join(__dirname, 'public');

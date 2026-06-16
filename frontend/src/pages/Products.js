@@ -76,6 +76,8 @@ export default function Products() {
               {/* Actions */}
               <div style={{ display:'flex', flexDirection:'column', gap:6, padding:'10px 10px 10px 0', flexShrink:0 }}>
                 <button onClick={() => openEdit(p)} style={{ padding:'7px 14px', background:'#eff6ff', color:'#2563eb', border:'none', borderRadius:9, fontWeight:600, cursor:'pointer', fontSize:13 }}>✏️ Modifier</button>
+                <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/p/${p.id}`); alert('Lien copié !'); }}
+                  style={{ padding:'7px 14px', background:'#f0fdf4', color:'#16a34a', border:'none', borderRadius:9, fontWeight:600, cursor:'pointer', fontSize:13 }}>🔗 Lien</button>
                 <button onClick={() => toggleActive(p)} style={{ padding:'7px 14px', background: p.active?'#fff7ed':'#f0fdf4', color: p.active?'#ea580c':'#16a34a', border:'none', borderRadius:9, fontWeight:600, cursor:'pointer', fontSize:13 }}>
                   {p.active ? '⏸ Pause' : '▶ Activer'}
                 </button>
