@@ -9,7 +9,7 @@ export default function LandingPages() {
   const [copyLang, setCopyLang] = useState('fr');
 
   useEffect(() => {
-    api.get('/products/all').then(r => setProducts(r.data)).catch(() => {});
+    api.get('/products').then(r => setProducts(r.data)).catch(() => {});
   }, []);
 
 
