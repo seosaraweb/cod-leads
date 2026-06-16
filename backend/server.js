@@ -261,13 +261,43 @@ app.get('/api/orders', auth, (req, res) => {
 
 app.get('/api/orders/stats', auth, (req, res) => {
   const d = req.query.date || new Date().toISOString().split('T')[0];
+
+  // Revenue today (confirmed + shipped + delivered)
+  const revenue = db.prepare("SELECT SUM(price*quantity) as total FROM orders WHERE DATE(confirmed_at)=? AND status NOT IN ('annulée','retournée')").get(d);
+
+  // By support with detail per status
+  const supports = db.prepare('SELECT DISTINCT support_name FROM orders WHERE DATE(confirmed_at)=?').all(d);
+  const todayBySupport = supports.map(s => {
+    const statuses = db.prepare("SELECT status, COUNT(*) as count, SUM(price*quantity) as revenue FROM orders WHERE DATE(confirmed_at)=? AND support_name=? GROUP BY status").all(d, s.support_name);
+    const total = statuses.reduce((sum, x) => sum + x.count, 0);
+    return { support_name: s.support_name, count: total, statuses };
+  }).sort((a,b) => b.count - a.count);
+
+  // Top products today
+  const topProducts = db.prepare("SELECT product_name, COUNT(*) as count, SUM(price*quantity) as revenue FROM orders WHERE DATE(confirmed_at)=? GROUP BY product_name ORDER BY count DESC LIMIT 8").all(d);
+
+  // Orders by hour today
+  const byHour = db.prepare("SELECT strftime('%H', confirmed_at) as hour, COUNT(*) as count FROM orders WHERE DATE(confirmed_at)=? GROUP BY hour ORDER BY hour").all(d);
+
+  // Confirmation rate
+  const confirmed = db.prepare("SELECT COUNT(*) as c FROM orders WHERE DATE(confirmed_at)=? AND status='confirmée'").get(d).c;
+  const enAttente = db.prepare("SELECT COUNT(*) as c FROM orders WHERE DATE(confirmed_at)=? AND status='en attente'").get(d).c;
+  const annulees = db.prepare("SELECT COUNT(*) as c FROM orders WHERE DATE(confirmed_at)=? AND status='annulée'").get(d).c;
+  const total = db.prepare('SELECT COUNT(*) as c FROM orders WHERE DATE(confirmed_at)=?').get(d).c;
+
   res.json({
-    todayCount: db.prepare('SELECT COUNT(*) as c FROM orders WHERE DATE(confirmed_at)=?').get(d).c,
-    todayBySupport: db.prepare('SELECT support_name, COUNT(*) as count FROM orders WHERE DATE(confirmed_at)=? GROUP BY support_name ORDER BY count DESC').all(d),
+    date: d,
+    todayCount: total,
+    todayRevenue: revenue?.total || 0,
+    confirmed, enAttente, annulees,
+    confirmationRate: total > 0 ? Math.round((confirmed / total) * 100) : 0,
+    todayBySupport,
     todayByCity: db.prepare('SELECT city, COUNT(*) as count FROM orders WHERE DATE(confirmed_at)=? GROUP BY city ORDER BY count DESC LIMIT 10').all(d),
+    topProducts,
+    byHour,
     totalCount: db.prepare('SELECT COUNT(*) as c FROM orders').get().c,
     totalByStatus: db.prepare('SELECT status, COUNT(*) as count FROM orders GROUP BY status').all(),
-    date: d
+    totalRevenue: db.prepare("SELECT SUM(price*quantity) as total FROM orders WHERE status NOT IN ('annulée','retournée')").get()?.total || 0,
   });
 });
 
