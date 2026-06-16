@@ -518,7 +518,7 @@ app.get('/p/:id', (req, res, next) => {
   if (!product) return res.status(404).send('Not found');
   
   const images = db.prepare('SELECT * FROM product_images WHERE product_id = ? ORDER BY sort_order LIMIT 1').all(product.id);
-  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  const baseUrl = `https://${req.get('host')}`;
   const imageUrl = images[0] ? `${baseUrl}/og-image/${product.id}` : '';
   const price = product.base_price;
   
@@ -533,7 +533,7 @@ app.get('/p/:id', (req, res, next) => {
   <meta property="og:image:width" content="1200"/>
   <meta property="og:image:height" content="630"/>
   <meta property="og:image:type" content="image/jpeg"/>` : ''}
-  <meta property="og:url" content="${baseUrl}/p/${product.id}"/>
+  <meta property="og:url" content="https://${req.get('host')}/p/${product.id}"/>
   <meta property="og:type" content="product"/>
   <meta property="og:site_name" content="Lili Discount"/>
   <meta name="twitter:card" content="summary_large_image"/>
