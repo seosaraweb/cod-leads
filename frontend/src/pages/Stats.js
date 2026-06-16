@@ -13,10 +13,18 @@ const S_COLOR = {
 export default function Stats() {
   const [stats, setStats] = useState(null);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [supportId, setSupportId] = useState('');
+  const [users, setUsers] = useState([]);
 
   useEffect(() => {
-    api.get(`/orders/stats?date=${date}`).then(r => setStats(r.data)).catch(() => {});
-  }, [date]);
+    api.get('/users').then(r => setUsers(r.data)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams({ date });
+    if (supportId) params.append('support_id', supportId);
+    api.get(`/orders/stats?${params}`).then(r => setStats(r.data)).catch(() => {});
+  }, [date, supportId]);
 
   if (!stats) return <div style={{ textAlign:'center', padding:60, color:'#aaa' }}>Chargement...</div>;
 
@@ -26,8 +34,15 @@ export default function Stats() {
     <div>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20, flexWrap:'wrap', gap:10 }}>
         <h1 style={{ margin:0, fontSize:22, fontWeight:800 }}>📊 Statistiques</h1>
-        <input type="date" value={date} onChange={e => setDate(e.target.value)}
-          style={{ padding:'9px 14px', borderRadius:10, border:'1.5px solid #e0e0e0', fontSize:14 }} />
+        <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+          <select value={supportId} onChange={e => setSupportId(e.target.value)}
+            style={{ padding:'9px 14px', borderRadius:10, border:'1.5px solid #e0e0e0', fontSize:14, background:'#fff' }}>
+            <option value="">Tous les supports</option>
+            {users.map(u => <option key={u.id} value={u.id}>{u.username}</option>)}
+          </select>
+          <input type="date" value={date} onChange={e => setDate(e.target.value)}
+            style={{ padding:'9px 14px', borderRadius:10, border:'1.5px solid #e0e0e0', fontSize:14 }} />
+        </div>
       </div>
 
       {/* KPIs principaux */}

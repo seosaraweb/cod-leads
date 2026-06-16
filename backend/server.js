@@ -261,29 +261,31 @@ app.get('/api/orders', auth, (req, res) => {
 
 app.get('/api/orders/stats', auth, (req, res) => {
   const d = req.query.date || new Date().toISOString().split('T')[0];
+  const supportFilter = req.query.support_id;
+  const supportWhere = supportFilter ? ` AND support_id = ${parseInt(supportFilter)}` : '';
 
   // Revenue today (confirmed + shipped + delivered)
-  const revenue = db.prepare("SELECT SUM(price*quantity) as total FROM orders WHERE DATE(confirmed_at)=? AND status NOT IN ('annulée','retournée')").get(d);
+  const revenue = db.prepare(`SELECT SUM(price*quantity) as total FROM orders WHERE DATE(confirmed_at)=? AND status NOT IN ('annulée','retournée')${supportWhere}`).get(d);
 
   // By support with detail per status
-  const supports = db.prepare('SELECT DISTINCT support_name FROM orders WHERE DATE(confirmed_at)=?').all(d);
+  const supports = db.prepare(`SELECT DISTINCT support_name FROM orders WHERE DATE(confirmed_at)=?${supportWhere}`).all(d);
   const todayBySupport = supports.map(s => {
-    const statuses = db.prepare("SELECT status, COUNT(*) as count, SUM(price*quantity) as revenue FROM orders WHERE DATE(confirmed_at)=? AND support_name=? GROUP BY status").all(d, s.support_name);
+    const statuses = db.prepare(`SELECT status, COUNT(*) as count, SUM(price*quantity) as revenue FROM orders WHERE DATE(confirmed_at)=? AND support_name=? GROUP BY status${supportWhere}`).all(d, s.support_name);
     const total = statuses.reduce((sum, x) => sum + x.count, 0);
     return { support_name: s.support_name, count: total, statuses };
   }).sort((a,b) => b.count - a.count);
 
   // Top products today
-  const topProducts = db.prepare("SELECT product_name, COUNT(*) as count, SUM(price*quantity) as revenue FROM orders WHERE DATE(confirmed_at)=? GROUP BY product_name ORDER BY count DESC LIMIT 8").all(d);
+  const topProducts = db.prepare(`SELECT product_name, COUNT(*) as count, SUM(price*quantity) as revenue FROM orders WHERE DATE(confirmed_at)=? GROUP BY product_name ORDER BY count DESC LIMIT 8${supportWhere}`).all(d);
 
   // Orders by hour today
-  const byHour = db.prepare("SELECT strftime('%H', confirmed_at) as hour, COUNT(*) as count FROM orders WHERE DATE(confirmed_at)=? GROUP BY hour ORDER BY hour").all(d);
+  const byHour = db.prepare(`SELECT strftime('%H', confirmed_at) as hour, COUNT(*) as count FROM orders WHERE DATE(confirmed_at)=? GROUP BY hour ORDER BY hour${supportWhere}`).all(d);
 
   // Confirmation rate
-  const confirmed = db.prepare("SELECT COUNT(*) as c FROM orders WHERE DATE(confirmed_at)=? AND status='confirmée'").get(d).c;
-  const enAttente = db.prepare("SELECT COUNT(*) as c FROM orders WHERE DATE(confirmed_at)=? AND status='en attente'").get(d).c;
-  const annulees = db.prepare("SELECT COUNT(*) as c FROM orders WHERE DATE(confirmed_at)=? AND status='annulée'").get(d).c;
-  const total = db.prepare('SELECT COUNT(*) as c FROM orders WHERE DATE(confirmed_at)=?').get(d).c;
+  const confirmed = db.prepare(`SELECT COUNT(*) as c FROM orders WHERE DATE(confirmed_at)=? AND status='confirmée'${supportWhere}`).get(d).c;
+  const enAttente = db.prepare(`SELECT COUNT(*) as c FROM orders WHERE DATE(confirmed_at)=? AND status='en attente'${supportWhere}`).get(d).c;
+  const annulees = db.prepare(`SELECT COUNT(*) as c FROM orders WHERE DATE(confirmed_at)=? AND status='annulée'${supportWhere}`).get(d).c;
+  const total = db.prepare(`SELECT COUNT(*) as c FROM orders WHERE DATE(confirmed_at)=?${supportWhere}`).get(d).c;
 
   res.json({
     date: d,
@@ -292,7 +294,7 @@ app.get('/api/orders/stats', auth, (req, res) => {
     confirmed, enAttente, annulees,
     confirmationRate: total > 0 ? Math.round((confirmed / total) * 100) : 0,
     todayBySupport,
-    todayByCity: db.prepare('SELECT city, COUNT(*) as count FROM orders WHERE DATE(confirmed_at)=? GROUP BY city ORDER BY count DESC LIMIT 10').all(d),
+    todayByCity: db.prepare(`SELECT city, COUNT(*) as count FROM orders WHERE DATE(confirmed_at)=? GROUP BY city ORDER BY count DESC LIMIT 10${supportWhere}`).all(d),
     topProducts,
     byHour,
     totalCount: db.prepare('SELECT COUNT(*) as c FROM orders').get().c,
