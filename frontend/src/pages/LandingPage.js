@@ -214,7 +214,7 @@ export default function LandingPage() {
         <h1 style={{ fontSize:22, fontWeight:900, textAlign:'center', margin:'0 0 16px', color:'#1a1a1a', lineHeight:1.3 }}>{product.name}</h1>
 
         {/* Main image — tap to open lightbox */}
-        <div style={{ borderRadius:18, overflow:'hidden', background:'#f0f0f0', marginBottom:10, boxShadow:'0 2px 16px rgba(0,0,0,0.1)', cursor:'zoom-in', position:'relative' }}
+        <div style={{ borderRadius:18, overflow:'hidden', background:'#f0f0f0', marginBottom:10, boxShadow:'0 2px 16px rgba(0,0,0,0.1)', cursor:'zoom-in' }}
           onClick={() => activeImage && setLightbox(activeImage.filename)}>
           {activeImage
             ? <img src={imgUrl(activeImage.filename)} alt={product.name} style={{ width:'100%', display:'block', maxHeight:'70vh', objectFit:'contain' }} />
