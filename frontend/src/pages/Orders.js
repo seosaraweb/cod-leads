@@ -42,6 +42,14 @@ export default function Orders() {
     if (user?.role==='admin') api.get('/users').then(r=>setUsers(r.data)).catch(()=>{});
   }, [user]);
 
+  const deleteOrder = async (id, ref) => {
+    if (!window.confirm(`Supprimer la commande ${ref} ? Cette action est irréversible.`)) return;
+    try {
+      await api.delete(`/orders/${id}`);
+      setOrders(o => o.filter(x => x.id !== id));
+    } catch(e) { alert('Erreur lors de la suppression'); }
+  };
+
   const updateStatus = async (id, status) => {
     await api.put(`/orders/${id}/status`, { status });
     setOrders(o => o.map(ord => ord.id===id ? {...ord,status} : ord));

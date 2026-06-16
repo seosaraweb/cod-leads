@@ -625,6 +625,14 @@ app.post('/api/landing/order', (req, res) => {
   res.json(db.prepare('SELECT * FROM orders WHERE order_ref = ?').get(ref));
 });
 
+// Delete order (admin only)
+app.delete('/api/orders/:id', auth, adminOnly, (req, res) => {
+  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+  if (!order) return res.status(404).json({ error: 'Commande introuvable' });
+  db.prepare('DELETE FROM orders WHERE id = ?').run(req.params.id);
+  res.json({ ok: true });
+});
+
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
 const buildPath = path.join(__dirname, 'public');

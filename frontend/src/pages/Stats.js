@@ -12,6 +12,7 @@ const S_COLOR = {
 
 export default function Stats() {
   const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [supportId, setSupportId] = useState('');
   const [users, setUsers] = useState([]);
@@ -20,13 +21,19 @@ export default function Stats() {
     api.get('/users').then(r => setUsers(r.data)).catch(() => {});
   }, []);
 
+
   useEffect(() => {
+    setLoading(true);
+    setStats(null);
     const params = new URLSearchParams({ date });
     if (supportId) params.append('support_id', supportId);
-    api.get(`/orders/stats?${params}`).then(r => setStats(r.data)).catch(() => {});
+    api.get(`/orders/stats?${params}`)
+      .then(r => setStats(r.data))
+      .catch(() => setStats(null))
+      .finally(() => setLoading(false));
   }, [date, supportId]);
 
-  if (!stats) return <div style={{ textAlign:'center', padding:60, color:'#aaa' }}>Chargement...</div>;
+  if (loading || !stats) return <div style={{ textAlign:'center', padding:60, color:'#aaa' }}><div style={{ fontSize:40 }}>⏳</div><div style={{ marginTop:12 }}>Chargement...</div></div>;
 
   const maxHour = Math.max(...(stats.byHour?.map(h => h.count) || [1]));
 
