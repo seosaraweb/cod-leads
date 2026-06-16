@@ -8,6 +8,7 @@ const NAV = [
   { path: '/print', icon: '🖨️', label: 'Imprimer', roles: ['support','admin'] },
   { path: '/stats', icon: '📊', label: 'Stats', roles: ['admin'] },
   { path: '/products', icon: '📦', label: 'Produits', roles: ['admin'] },
+  { path: '/landing-pages', icon: '🔗', label: 'Landing Pages', roles: ['admin'] },
   { path: '/users', icon: '👥', label: 'Équipe', roles: ['admin'] },
 ];
 
