@@ -261,51 +261,18 @@ export default function NewOrder() {
       )}
 
       {/* Current item config */}
-      <div style={{ background:'#fff', borderRadius:14, padding:'16px', marginBottom:12 }}>
-        <div style={{ fontWeight:700, fontSize:14, color:'#666', marginBottom:10 }}>📦 Article en cours</div>
-        <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:10 }}>
-          <div style={{ flex:1 }}>
-            <label style={{ fontSize:12, color:'#888', display:'block', marginBottom:4 }}>Prix unitaire (DH)</label>
-            <input type="number" min="0"
-              value={cart.currentPrice ?? getBasePrice()}
-              onChange={e => setCart(c => ({...c, currentPrice: e.target.value}))}
-              id="currentPrice"
-              defaultValue={getBasePrice()}
-              style={{ ...inp, padding:'10px 14px' }} />
-          </div>
-          <div style={{ flex:1 }}>
-            <label style={{ fontSize:12, color:'#888', display:'block', marginBottom:4 }}>Quantité</label>
-            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-              <button onClick={() => document.getElementById('qty').value = Math.max(1, parseInt(document.getElementById('qty').value||1)-1)}
-                style={{ width:38,height:38,borderRadius:10,border:'2px solid #e5e7eb',background:'#f9f9f9',fontSize:20,cursor:'pointer',fontWeight:700 }}>−</button>
-              <input id="qty" type="number" min="1" defaultValue="1"
-                style={{ width:50, textAlign:'center', padding:'8px', borderRadius:10, border:'2px solid #e5e7eb', fontSize:18, fontWeight:700, outline:'none' }} />
-              <button onClick={() => document.getElementById('qty').value = parseInt(document.getElementById('qty').value||1)+1}
-                style={{ width:38,height:38,borderRadius:10,border:'2px solid #e5e7eb',background:'#f9f9f9',fontSize:20,cursor:'pointer',fontWeight:700 }}>+</button>
-            </div>
-          </div>
-        </div>
-        <div style={{ display:'flex', gap:10 }}>
-          <button onClick={() => {
-            const price = Number(document.getElementById('currentPrice')?.value || getBasePrice());
-            const qty = parseInt(document.getElementById('qty')?.value || 1);
-            const img = activeImage || product.images?.[0];
-            setCart(c => [...c, { product, variant, activeImage: img, price, quantity: qty, label: getVariantLabel() }]);
-            setProduct(null); setVariant(null); setActiveImage(null);
-            setStep(STEP.PRODUCT);
-          }} style={{ flex:1, padding:'11px', background:'#f0fdf4', color:'#166534', border:'2px solid #bbf7d0', borderRadius:12, fontSize:14, fontWeight:700, cursor:'pointer' }}>
-            ➕ Ajouter + autre produit
-          </button>
-          <button onClick={() => {
-            const price = Number(document.getElementById('currentPrice')?.value || getBasePrice());
-            const qty = parseInt(document.getElementById('qty')?.value || 1);
-            const img = activeImage || product.images?.[0];
-            setCart(c => [...c, { product, variant, activeImage: img, price, quantity: qty, label: getVariantLabel() }]);
-          }} style={{ padding:'11px 18px', background:'#eff6ff', color:'#2563eb', border:'2px solid #dbeafe', borderRadius:12, fontSize:14, fontWeight:700, cursor:'pointer' }}>
-            ✓ Valider cet article
-          </button>
-        </div>
-      </div>
+      <CurrentItemPanel
+        product={product} variant={variant} activeImage={activeImage}
+        getBasePrice={getBasePrice} getVariantLabel={getVariantLabel}
+        onAddAndContinue={(item) => {
+          setCart(c => [...c, item]);
+          setProduct(null); setVariant(null); setActiveImage(null);
+          setStep(STEP.PRODUCT);
+        }}
+        onValidate={(item) => {
+          setCart(c => [...c, item]);
+        }}
+      />
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(280px, 1fr))', gap:16 }}>
         <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
@@ -352,6 +319,56 @@ export default function NewOrder() {
         style={{ width:'100%', marginTop:16, padding:'18px', background: (loading||cart.length===0)?'#93c5fd':'#2563eb', color:'#fff', border:'none', borderRadius:16, fontSize:18, fontWeight:800, cursor: (loading||cart.length===0)?'not-allowed':'pointer', boxShadow:'0 4px 16px rgba(37,99,235,0.3)' }}>
         {loading ? '⏳ Confirmation...' : cart.length === 0 ? 'Valide d\'abord un article ↑' : `✅ Confirmer — ${cartTotal} DH`}
       </button>
+    </div>
+  );
+}
+
+function CurrentItemPanel({ product, variant, activeImage, getBasePrice, getVariantLabel, onAddAndContinue, onValidate }) {
+  const [price, setPrice] = React.useState(getBasePrice());
+  const [qty, setQty] = React.useState(1);
+
+  React.useEffect(() => { setPrice(getBasePrice()); setQty(1); }, [product, variant]);
+
+  const buildItem = () => ({
+    product, variant,
+    activeImage: activeImage || product?.images?.[0],
+    price: Number(price) || getBasePrice(),
+    quantity: qty,
+    label: getVariantLabel()
+  });
+
+  const inp2 = { padding:'10px 14px', borderRadius:10, border:'2px solid #e5e7eb', fontSize:16, outline:'none', boxSizing:'border-box', fontFamily:'inherit' };
+
+  return (
+    <div style={{ background:'#fff', borderRadius:14, padding:'16px', marginBottom:12 }}>
+      <div style={{ fontWeight:700, fontSize:14, color:'#666', marginBottom:12 }}>📦 Article en cours</div>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
+        <div>
+          <label style={{ fontSize:12, color:'#888', display:'block', marginBottom:4 }}>Prix unitaire (DH)</label>
+          <input type="number" min="0" value={price} onChange={e => setPrice(e.target.value)} style={{ ...inp2, width:'100%' }} />
+        </div>
+        <div>
+          <label style={{ fontSize:12, color:'#888', display:'block', marginBottom:4 }}>Quantité</label>
+          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            <button onClick={() => setQty(q => Math.max(1, q-1))} style={{ width:38,height:38,borderRadius:10,border:'2px solid #e5e7eb',background:'#f9f9f9',fontSize:20,cursor:'pointer',fontWeight:700,flexShrink:0 }}>−</button>
+            <span style={{ flex:1, textAlign:'center', fontSize:20, fontWeight:800 }}>{qty}</span>
+            <button onClick={() => setQty(q => q+1)} style={{ width:38,height:38,borderRadius:10,border:'2px solid #e5e7eb',background:'#f9f9f9',fontSize:20,cursor:'pointer',fontWeight:700,flexShrink:0 }}>+</button>
+          </div>
+        </div>
+      </div>
+      <div style={{ textAlign:'center', fontSize:22, fontWeight:800, color:'#059669', marginBottom:12 }}>
+        {(Number(price)||0) * qty} DH
+      </div>
+      <div style={{ display:'flex', gap:10 }}>
+        <button onClick={() => onAddAndContinue(buildItem())}
+          style={{ flex:1, padding:'11px', background:'#f0fdf4', color:'#166534', border:'2px solid #bbf7d0', borderRadius:12, fontSize:14, fontWeight:700, cursor:'pointer' }}>
+          ➕ Ajouter + autre produit
+        </button>
+        <button onClick={() => onValidate(buildItem())}
+          style={{ padding:'11px 18px', background:'#eff6ff', color:'#2563eb', border:'2px solid #dbeafe', borderRadius:12, fontSize:14, fontWeight:700, cursor:'pointer' }}>
+          ✓ OK
+        </button>
+      </div>
     </div>
   );
 }
