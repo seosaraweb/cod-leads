@@ -103,9 +103,16 @@ export default function PrintPage() {
             {orders.map(o => (
               <div key={o.id} className="label" style={{ border:'2px solid #000', padding:'10px 12px', minHeight:170, display:'flex', flexDirection:'column', gap:3, pageBreakInside:'avoid' }}>
                 <div style={{ fontSize:10, fontFamily:'monospace', fontWeight:'bold', color:'#333' }}>{o.order_ref} — {new Date(o.confirmed_at).toLocaleDateString('fr-MA')}</div>
-                <div style={{ fontSize:13, fontWeight:'bold', borderBottom:'1px solid #ddd', paddingBottom:4, marginBottom:4 }}>
-                  {o.product_name}{o.size ? ` (${o.size})` : ''}{o.quantity > 1 ? ` ×${o.quantity}` : ''}
-                  {o.notes ? ` — ${o.notes}` : ''}
+                <div style={{ display:'flex', gap:8, alignItems:'flex-start', borderBottom:'1px solid #ddd', paddingBottom:6, marginBottom:4 }}>
+                  {o.product_image && (
+                    <img src={getImageUrl('/uploads/' + o.product_image)} alt=""
+                      style={{ width:54, height:54, objectFit:'cover', borderRadius:4, flexShrink:0, border:'1px solid #ddd' }} />
+                  )}
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:13, fontWeight:'bold' }}>{o.product_name}{o.quantity > 1 ? ' ×' + o.quantity : ''}</div>
+                    {o.variant_label && <div style={{ fontSize:14, fontWeight:900, background:'#000', color:'#fff', display:'inline-block', padding:'2px 10px', borderRadius:4, marginTop:3 }}>{o.variant_label}</div>}
+                    {o.notes && <div style={{ fontSize:11, color:'#555', marginTop:2 }}>{o.notes}</div>}
+                  </div>
                 </div>
                 <div style={{ fontSize:20, fontWeight:900 }}>{o.client_name}</div>
                 <div style={{ fontSize:20, fontWeight:900, letterSpacing:1 }}>{o.phone}</div>
