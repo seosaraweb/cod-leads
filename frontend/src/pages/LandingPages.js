@@ -6,16 +6,52 @@ const imgUrl = f => f ? getImageUrl(`/uploads/${f}`) : null;
 export default function LandingPages() {
   const [products, setProducts] = useState([]);
   const [copied, setCopied] = useState(null);
+  const [copyLang, setCopyLang] = useState('fr');
 
   useEffect(() => {
     api.get('/products/all').then(r => setProducts(r.data)).catch(() => {});
   }, []);
 
-  const copyLink = (id) => {
-    const url = `${window.location.origin}/p/${id}`;
-    navigator.clipboard.writeText(url);
-    setCopied(id);
-    setTimeout(() => setCopied(null), 2000);
+  const [copyLang, setCopyLang] = useState('fr');
+
+  const getMessage = (p, lang) => {
+    const url = `${window.location.origin}/p/${p.id}`;
+    const price = p.variants?.length > 0
+      ? `à partir de ${Math.min(...p.variants.map(v => v.price || p.base_price))} DH`
+      : `${p.base_price} DH`;
+
+    if (lang === 'ar') {
+      return `🛍️ *${p.name}*
+
+✨ منتج حصري بسعر مميز — ${price.replace('à partir de','ابتداء من').replace('DH','درهم')}
+
+✅ الدفع عند الاستلام
+🚚 توصيل لجميع مدن المغرب
+📦 ضمان الجودة
+
+👇 اطلب الآن من هنا:
+${url}
+
+⚡ الكميات محدودة — لا تفوّت الفرصة!`;
+    }
+    return `🛍️ *${p.name}*
+
+✨ Produit exclusif à un prix imbattable — ${price}
+
+✅ Paiement à la livraison
+🚚 Livraison partout au Maroc
+📦 Qualité garantie
+
+👇 Commandez maintenant ici :
+${url}
+
+⚡ Quantités limitées — Ne ratez pas cette offre !`;
+  };
+
+  const copyMessage = (p, lang) => {
+    navigator.clipboard.writeText(getMessage(p, lang));
+    setCopied(p.id + '_' + lang);
+    setTimeout(() => setCopied(null), 2500);
   };
 
   const openLink = (id) => window.open(`/p/${id}`, '_blank');
@@ -73,21 +109,17 @@ export default function LandingPages() {
 
               {/* Actions */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '12px 12px 12px 0', flexShrink: 0, justifyContent: 'center' }}>
-                <button onClick={() => copyLink(p.id)}
-                  style={{ padding: '8px 14px', background: copied === p.id ? '#d1fae5' : '#eff6ff', color: copied === p.id ? '#065f46' : '#2563eb', border: 'none', borderRadius: 9, fontWeight: 700, cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}>
-                  {copied === p.id ? '✅ Copié !' : '📋 Copier lien'}
-                </button>
                 <button onClick={() => openLink(p.id)}
-                  style={{ padding: '8px 14px', background: '#f0fdf4', color: '#16a34a', border: 'none', borderRadius: 9, fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
+                  style={{ padding:'8px 14px', background:'#f0fdf4', color:'#16a34a', border:'none', borderRadius:9, fontWeight:700, cursor:'pointer', fontSize:13 }}>
                   👁️ Aperçu
                 </button>
-                <button onClick={() => {
-                  const text = `🛍️ *${p.name}*\n💰 Prix: ${p.base_price} DH\n📦 Paiement à la livraison\n\n👉 Commander ici: ${url}`;
-                  navigator.clipboard.writeText(text);
-                  alert('Message WhatsApp copié !');
-                }}
-                  style={{ padding: '8px 14px', background: '#f0fdf4', color: '#25d366', border: 'none', borderRadius: 9, fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
-                  📱 WhatsApp
+                <button onClick={() => copyMessage(p, 'fr')}
+                  style={{ padding:'8px 14px', background: copied===p.id+'_fr'?'#d1fae5':'#eff6ff', color: copied===p.id+'_fr'?'#065f46':'#2563eb', border:'none', borderRadius:9, fontWeight:700, cursor:'pointer', fontSize:13, whiteSpace:'nowrap' }}>
+                  {copied===p.id+'_fr' ? '✅ Copié !' : '📋 Message FR'}
+                </button>
+                <button onClick={() => copyMessage(p, 'ar')}
+                  style={{ padding:'8px 14px', background: copied===p.id+'_ar'?'#d1fae5':'#fef3c7', color: copied===p.id+'_ar'?'#065f46':'#92400e', border:'none', borderRadius:9, fontWeight:700, cursor:'pointer', fontSize:13, whiteSpace:'nowrap' }}>
+                  {copied===p.id+'_ar' ? '✅ تم !' : '📋 رسالة عربي'}
                 </button>
               </div>
             </div>
