@@ -34,10 +34,10 @@ const T = {
     fieldProduct: '📦 Produit', fieldPrice: '💰 Prix', fieldCity: '📍 Ville', fieldPhone: '📱 Téléphone',
     errorFill: 'Merci de remplir tous les champs',
     errorVariant: '👆 Veuillez choisir une taille / couleur ci-dessus',
-    errorName: '✏️ Merci d'entrer votre nom complet',
-    errorPhone: '📱 Merci d'entrer votre numéro de téléphone',
+    errorName: "✏️ Merci d'entrer votre nom complet",
+    errorPhone: "📱 Merci d'entrer votre numéro de téléphone",
     errorPhoneInvalid: '📱 Numéro de téléphone invalide (minimum 8 chiffres)',
-    errorAddress: '📍 Merci d'entrer votre adresse complète (rue, quartier...)',
+    errorAddress: "📍 Merci d'entrer votre adresse complète (rue, quartier...)",
     errorCity: '🏙️ Merci de choisir votre ville',
   },
   ar: {
