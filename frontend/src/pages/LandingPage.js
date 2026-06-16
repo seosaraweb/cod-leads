@@ -13,7 +13,7 @@ const T = {
     chooseVariant: 'Choisir la variante',
     totalPrice: 'Prix total',
     payOnDelivery: '✅ Paiement à la livraison',
-    deliveryDays: '🚚 Livraison 2-5 jours',
+    deliveryDays: '🚚 Livraison 1-3 jours',
     confirmCall: '📞 Confirmation par appel',
     yourInfo: '📋 Vos informations',
     fullName: 'Nom complet *',
@@ -41,7 +41,7 @@ const T = {
     chooseVariant: 'اختر المقاس أو اللون',
     totalPrice: 'السعر الإجمالي',
     payOnDelivery: '✅ الدفع عند الاستلام',
-    deliveryDays: '🚚 التوصيل خلال 2-5 أيام',
+    deliveryDays: '🚚 التوصيل خلال 1-3 أيام',
     confirmCall: '📞 تأكيد بالاتصال',
     yourInfo: '📋 معلوماتك',
     fullName: 'الاسم الكامل *',
@@ -183,12 +183,12 @@ export default function LandingPage() {
         <h1 style={{ fontSize:22, fontWeight:900, textAlign:'center', margin:'0 0 16px', color:'#1a1a1a', lineHeight:1.3 }}>{product.name}</h1>
 
         {/* Main image — tap to open lightbox */}
-        <div style={{ borderRadius:18, overflow:'hidden', background:'#f0f0f0', marginBottom:10, boxShadow:'0 2px 16px rgba(0,0,0,0.1)', cursor:'zoom-in' }}
+        <div style={{ borderRadius:18, overflow:'hidden', background:'#f0f0f0', marginBottom:10, boxShadow:'0 2px 16px rgba(0,0,0,0.1)', cursor:'pointer' }}
           onClick={() => activeImage && setLightbox(activeImage.filename)}>
           {activeImage
             ? <img src={imgUrl(activeImage.filename)} alt={product.name} style={{ width:'100%', display:'block', maxHeight:'70vh', objectFit:'contain' }} />
             : <div style={{ height:300, display:'flex', alignItems:'center', justifyContent:'center', fontSize:80 }}>📦</div>}
-          <div style={{ position:'absolute', bottom:10, right:10, background:'rgba(0,0,0,0.4)', color:'#fff', borderRadius:8, padding:'4px 10px', fontSize:12 }}>🔍 Agrandir</div>
+
         </div>
 
         {/* Thumbnails */}
