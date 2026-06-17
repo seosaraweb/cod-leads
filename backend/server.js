@@ -422,7 +422,7 @@ app.get('/api/export/xlsx', (req, res, next) => {
       const r = ri+2;
       const produit = o.product_name+(o.variant_label?` - ${o.variant_label}`:'')+((o.quantity||1)>1?` x${o.quantity}`:'');
       const vals = [
-        o.order_ref, o.client_name, String(o.phone||''), o.address||'',
+        '', o.client_name, String(o.phone||''), o.address||'',
         null, o.city||'', o.notes||'', '', produit, null
       ];
       const prix = (o.price||0)*(o.quantity||1);
