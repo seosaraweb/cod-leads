@@ -18,6 +18,7 @@ export default function NewOrder() {
   const [product, setProduct] = useState(null);
   const [variant, setVariant] = useState(null);
   const [activeImage, setActiveImage] = useState(null);
+  const [selColor, setSelColor] = useState(null);
 
   const [form, setForm] = useState({ client_name:'', phone:'', address:'', city:'', notes:'' });
   const [loading, setLoading] = useState(false);
@@ -27,7 +28,7 @@ export default function NewOrder() {
   useEffect(() => { api.get('/products').then(r => setProducts(r.data)).catch(()=>{}); }, []);
 
   const pickProduct = (p) => {
-    setProduct(p); setActiveImage(p.images?.[0] || null); setVariant(null);
+    setProduct(p); setActiveImage(p.images?.[0] || null); setVariant(null); setSelColor(null);
     if (p.variants?.length > 0) setStep(STEP.VARIANT);
     else setStep(STEP.CLIENT);
   };
@@ -193,7 +194,6 @@ export default function NewOrder() {
     // Get unique colors
     const colors = [...new Set(product.variants.map(v => v.color).filter(Boolean))];
     const hasColors = colors.length > 0;
-    const [selColor, setSelColor] = React.useState(colors[0] || null);
 
     // Filter variants by selected color
     const filteredVariants = hasColors && selColor
