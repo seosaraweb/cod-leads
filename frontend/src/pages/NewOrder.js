@@ -188,46 +188,77 @@ export default function NewOrder() {
     </div>
   );
 
-  // ── STEP 2 : VARIANT PICKER ──
-  if (step === STEP.VARIANT) return (
-    <div>
-      <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
-        <button onClick={()=>setStep(STEP.PRODUCT)} style={{ width:42,height:42,borderRadius:12,border:'2px solid #e5e7eb',background:'#fff',fontSize:20,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>←</button>
-        <h2 style={{ margin:0, fontSize:20, fontWeight:800 }}>{product.name}</h2>
-      </div>
-      <div style={{ borderRadius:16, overflow:'hidden', background:'#f0f0f0', aspectRatio:'4/3', marginBottom:10 }}>
-        {activeImage ? <img src={imgUrl(activeImage.filename)} alt="" style={{ width:'100%', height:'100%', objectFit:'contain' }} />
-                     : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:64 }}>📦</div>}
-      </div>
-      {product.images?.length > 1 && (
-        <div style={{ display:'flex', gap:8, overflowX:'auto', paddingBottom:8, marginBottom:16 }}>
-          {product.images.map(img => (
-            <div key={img.id} onClick={() => setActiveImage(img)} style={{ flexShrink:0, width:64, height:64, borderRadius:10, overflow:'hidden', cursor:'pointer', border: activeImage?.id===img.id ? '3px solid #2563eb' : '3px solid transparent' }}>
-              <img src={imgUrl(img.filename)} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-            </div>
-          ))}
+  // ── STEP 2 : VARIANT PICKER — couleur d'abord, puis taille ──
+  if (step === STEP.VARIANT) {
+    // Get unique colors
+    const colors = [...new Set(product.variants.map(v => v.color).filter(Boolean))];
+    const hasColors = colors.length > 0;
+    const [selColor, setSelColor] = React.useState(colors[0] || null);
+
+    // Filter variants by selected color
+    const filteredVariants = hasColors && selColor
+      ? product.variants.filter(v => v.color === selColor)
+      : product.variants;
+
+    return (
+      <div>
+        <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
+          <button onClick={()=>setStep(STEP.PRODUCT)} style={{ width:42,height:42,borderRadius:12,border:'2px solid #e5e7eb',background:'#fff',fontSize:20,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>←</button>
+          <h2 style={{ margin:0, fontSize:20, fontWeight:800 }}>{product.name}</h2>
         </div>
-      )}
-      <div style={{ fontWeight:700, fontSize:15, marginBottom:10, color:'#555' }}>Choisir la variante</div>
-      <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-        {product.variants.map((v, idx) => {
-          const varImg = v.image_id ? product.images?.find(i => i.id === v.image_id) : null;
-          const label = [v.size, v.color].filter(Boolean).join(' / ') || `Variante ${idx+1}`;
-          return (
-            <button key={v.id||idx} onClick={() => pickVariant(v)}
-              style={{ display:'flex', alignItems:'center', gap:12, padding:'14px 16px', background:'#fff', border:'2px solid #e5e7eb', borderRadius:14, cursor:'pointer', textAlign:'left', width:'100%', boxSizing:'border-box' }}
-              onMouseEnter={e=>{e.currentTarget.style.borderColor='#2563eb';e.currentTarget.style.background='#eff6ff';}}
-              onMouseLeave={e=>{e.currentTarget.style.borderColor='#e5e7eb';e.currentTarget.style.background='#fff';}}>
-              {varImg ? <div style={{ width:48,height:48,borderRadius:10,overflow:'hidden',flexShrink:0 }}><img src={imgUrl(varImg.filename)} alt="" style={{ width:'100%',height:'100%',objectFit:'cover' }} /></div>
-                      : <div style={{ width:48,height:48,borderRadius:10,background:'#f0f0f0',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22 }}>📦</div>}
-              <div style={{ flex:1, fontWeight:700, fontSize:16 }}>{label}</div>
-              <div style={{ fontWeight:800, fontSize:18, color:'#059669', flexShrink:0 }}>{v.price} DH →</div>
-            </button>
-          );
-        })}
+        <div style={{ borderRadius:16, overflow:'hidden', background:'#f0f0f0', aspectRatio:'4/3', marginBottom:10 }}>
+          {activeImage ? <img src={imgUrl(activeImage.filename)} alt="" style={{ width:'100%', height:'100%', objectFit:'contain' }} />
+                       : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:64 }}>📦</div>}
+        </div>
+        {product.images?.length > 1 && (
+          <div style={{ display:'flex', gap:8, overflowX:'auto', paddingBottom:8, marginBottom:12 }}>
+            {product.images.map(img => (
+              <div key={img.id} onClick={() => setActiveImage(img)} style={{ flexShrink:0, width:64, height:64, borderRadius:10, overflow:'hidden', cursor:'pointer', border: activeImage?.id===img.id ? '3px solid #2563eb' : '3px solid transparent' }}>
+                <img src={imgUrl(img.filename)} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Couleur selector */}
+        {hasColors && (
+          <div style={{ marginBottom:16 }}>
+            <div style={{ fontWeight:700, fontSize:14, color:'#555', marginBottom:8 }}>🎨 Couleur</div>
+            <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+              {colors.map(color => {
+                const colorVariant = product.variants.find(v => v.color === color);
+                const colorImg = colorVariant?.image_id ? product.images?.find(i => i.id === colorVariant.image_id) : null;
+                return (
+                  <button key={color} onClick={() => { setSelColor(color); if(colorImg) setActiveImage(colorImg); }}
+                    style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 14px', borderRadius:12, border: selColor===color ? '2px solid #2563eb' : '2px solid #e5e7eb', background: selColor===color ? '#eff6ff' : '#fff', cursor:'pointer', fontWeight:700, fontSize:14 }}>
+                    {colorImg && <img src={imgUrl(colorImg.filename)} alt="" style={{ width:28,height:28,borderRadius:6,objectFit:'cover' }} />}
+                    {color}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Taille selector */}
+        <div style={{ fontWeight:700, fontSize:14, color:'#555', marginBottom:8 }}>📏 Taille</div>
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          {filteredVariants.map((v, idx) => {
+            const label = v.size || [v.size, v.color].filter(Boolean).join(' / ') || `Variante ${idx+1}`;
+            return (
+              <button key={v.id||idx} onClick={() => pickVariant(v)}
+                style={{ display:'flex', alignItems:'center', gap:12, padding:'14px 16px', background:'#fff', border:'2px solid #e5e7eb', borderRadius:14, cursor:'pointer', textAlign:'left', width:'100%', boxSizing:'border-box' }}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor='#2563eb';e.currentTarget.style.background='#eff6ff';}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor='#e5e7eb';e.currentTarget.style.background='#fff';}}>
+                <div style={{ flex:1, fontWeight:700, fontSize:18 }}>{label}</div>
+                <div style={{ fontWeight:800, fontSize:18, color:'#059669', flexShrink:0 }}>{v.price} DH →</div>
+              </button>
+            );
+          })}
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 
   // ── STEP 3 : CLIENT FORM ──
   return (
