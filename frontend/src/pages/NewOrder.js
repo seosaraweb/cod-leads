@@ -28,7 +28,10 @@ export default function NewOrder() {
   useEffect(() => { api.get('/products').then(r => setProducts(r.data)).catch(()=>{}); }, []);
 
   const pickProduct = (p) => {
-    setProduct(p); setActiveImage(p.images?.[0] || null); setVariant(null); setSelColor(null);
+    setProduct(p); setActiveImage(p.images?.[0] || null); setVariant(null);
+    // Auto-select first color
+    const firstColor = p.variants?.map(v => v.color).filter(Boolean)[0] || null;
+    setSelColor(firstColor);
     if (p.variants?.length > 0) setStep(STEP.VARIANT);
     else setStep(STEP.CLIENT);
   };
@@ -196,7 +199,7 @@ export default function NewOrder() {
     const hasColors = colors.length > 0;
 
     // Filter variants by selected color
-    const filteredVariants = hasColors && selColor
+    const filteredVariants = (hasColors && selColor)
       ? product.variants.filter(v => v.color === selColor)
       : product.variants;
 
