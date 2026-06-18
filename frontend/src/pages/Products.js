@@ -133,7 +133,7 @@ function ProductEditor({ product, onBack }) {
 
     // Auto-save basic info if product not yet created
     if (!pid) {
-      if (!info.name) { setError('Saisis d'abord le nom du produit'); e.target.value = ''; return; }
+      if (!info.name) { setError("Saisis d'abord le nom du produit"); e.target.value = ''; return; }
       setUploading(true);
       try {
         const res = await api.post('/products', { ...info, active: true });
