@@ -194,6 +194,7 @@ export default function NewOrder() {
 
   // ── STEP 2 : VARIANT PICKER — couleur d'abord, puis taille ──
   if (step === STEP.VARIANT) {
+    if (!product) { setStep(STEP.PRODUCT); return null; }
     // Get unique colors
     const colors = [...new Set(product.variants.map(v => v.color).filter(Boolean))];
     const hasColors = colors.length > 0;
@@ -264,6 +265,7 @@ export default function NewOrder() {
   }
 
   // ── STEP 3 : CLIENT FORM ──
+  if (!product && cart.length === 0) { setStep(STEP.PRODUCT); return null; }
   return (
     <div>
       {/* Header recap */}
