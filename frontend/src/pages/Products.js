@@ -124,17 +124,33 @@ function ProductEditor({ product, onBack }) {
     setSaving(false);
   };
 
-  /* Upload images */
+  /* Upload images — auto-save product first if new */
   const handleUpload = async (e) => {
     const files = Array.from(e.target.files);
     if (!files.length) return;
-    setUploading(true);
+
+    let pid = productId;
+
+    // Auto-save basic info if product not yet created
+    if (!pid) {
+      if (!info.name) { setError('Saisis d'abord le nom du produit'); e.target.value = ''; return; }
+      setUploading(true);
+      try {
+        const res = await api.post('/products', { ...info, active: true });
+        pid = res.data.id;
+        setProductId(pid);
+        setSaved(true);
+      } catch(err) { setError('Erreur sauvegarde produit'); setUploading(false); e.target.value = ''; return; }
+    } else {
+      setUploading(true);
+    }
+
     const fd = new FormData();
     files.forEach(f => fd.append('images', f));
     try {
-      const res = await api.post(`/products/${productId}/images`, fd, { headers:{ 'Content-Type':'multipart/form-data' } });
+      const res = await api.post(`/products/${pid}/images`, fd, { headers:{ 'Content-Type':'multipart/form-data' } });
       setImages(prev => [...prev, ...res.data]);
-    } catch(e) { setError('Erreur upload'); }
+    } catch(err) { setError('Erreur upload — vérifiez le format (JPG/PNG) et la taille (max 8MB)'); }
     setUploading(false);
     e.target.value = '';
   };
