@@ -65,18 +65,24 @@ export default function NewOrder() {
   const confirm = async () => {
     if (!form.client_name || !form.phone || !form.address || !form.city)
       return setError('Remplis tous les champs obligatoires');
-    if (cart.length === 0) return setError('Ajoute au moins un produit');
+    // Auto-add current item to cart if not yet added
+    const finalCart = [...cart];
+    if (product) {
+      const img = activeImage || product.images?.[0];
+      finalCart.push({ product, variant, activeImage: img, price: getBasePrice(), quantity: 1, label: getVariantLabel() });
+    }
+    if (finalCart.length === 0) return setError('Ajoute au moins un produit');
     setLoading(true); setError('');
     try {
       // Create one order per cart item, or combine into notes
-      const mainItem = cart[0];
-      const extraItems = cart.slice(1);
+      const mainItem = finalCart[0];
+      const extraItems = finalCart.slice(1);
       const notesExtra = extraItems.length > 0
         ? extraItems.map(item => `+ ${item.product.name}${item.label?' ('+item.label+')':''} x${item.quantity} — ${item.price}DH`).join(', ')
         : '';
       const notes = [form.notes, notesExtra].filter(Boolean).join(' | ');
-      const productName = cart.length > 1
-        ? cart.map(item => `${item.product.name}${item.label?' ('+item.label+')':''}`).join(' + ')
+      const productName = finalCart.length > 1
+        ? finalCart.map(item => `${item.product.name}${item.label?' ('+item.label+')':''}`).join(' + ')
         : mainItem.product.name;
 
       const res = await api.post('/orders', {
@@ -85,7 +91,7 @@ export default function NewOrder() {
         product_image: mainItem.activeImage?.filename || mainItem.product.images?.[0]?.filename || '',
         variant_id: mainItem.variant?.id || null,
         variant_label: mainItem.label || '',
-        price: cartTotal,
+        price: finalCart.reduce((s, item) => s + (Number(item.price)||0) * (item.quantity||1), 0),
         quantity: 1,
         notes,
         ...form
@@ -341,11 +347,11 @@ export default function NewOrder() {
         </div>
       </div>
 
-      {/* Total */}
+      {/* Total — cart + current item */}
       {cart.length > 0 && (
         <div style={{ background:'#fff', borderRadius:14, padding:'14px 18px', marginTop:12, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <span style={{ fontWeight:700, fontSize:15, color:'#555' }}>Total ({cart.length} article{cart.length>1?'s':''})</span>
-          <span style={{ fontWeight:900, fontSize:24, color:'#059669' }}>{cartTotal} DH</span>
+          <span style={{ fontWeight:700, fontSize:15, color:'#555' }}>Total ({cart.length + (product ? 1 : 0)} article{(cart.length + (product?1:0)) > 1?'s':''})</span>
+          <span style={{ fontWeight:900, fontSize:24, color:'#059669' }}>{cartTotal + (product ? getBasePrice() : 0)} DH</span>
         </div>
       )}
 
